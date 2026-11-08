@@ -1,0 +1,21 @@
+# Dependencias
+node_modules/
+npm-debug.log*
+
+# Entorno y credenciales
+.env
+.env.*
+!.env.example
+
+# Compilación y caché
+dist/
+build/
+.cache/
+*.tsbuildinfo
+
+# IDEs y SO
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
