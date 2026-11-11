@@ -1,7 +1,10 @@
 import { ConfigService } from '@nestjs/config';
 import type { Pool, PoolClient } from 'pg';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { PostgresService } from './postgres.service.js';
+import {
+  PostgresService,
+  sanitizeDbErrorMessage,
+} from './postgres.service.js';
 
 describe('PostgresService', () => {
   let service: PostgresService;
@@ -51,13 +54,27 @@ describe('PostgresService', () => {
     expect(typeof res.latencyMs).toBe('number');
   });
 
+  it('verifica conectividad y existencia del esquema en checkReadiness()', async () => {
+    mockPool.query.mockResolvedValue({
+      rows: [{ ok: 1, schema_exists: true }],
+      rowCount: 1,
+    });
+
+    const res = await service.checkReadiness();
+
+    expect(res.ok).toBe(true);
+    expect(res.schema).toBe('sigeh');
+    expect(res.schemaVerified).toBe(true);
+  });
+
   it('ejecuta BEGIN, trabajo y COMMIT en el mismo PoolClient durante withTransaction()', async () => {
     mockClient.query.mockResolvedValue({ rows: [], rowCount: 0 });
 
     const output = await service.withTransaction(async (client) => {
-      await client.query('SELECT 1 FROM sigeh.hospitales WHERE hospital_id = $1', [
-        '11111111-1111-4111-8111-111111111111',
-      ]);
+      await client.query(
+        'SELECT 1 FROM sigeh.hospitales WHERE hospital_id = $1',
+        ['11111111-1111-4111-8111-111111111111'],
+      );
       return 'tx-ok';
     });
 
@@ -70,10 +87,10 @@ describe('PostgresService', () => {
       ['11111111-1111-4111-8111-111111111111'],
     );
     expect(mockClient.query).toHaveBeenNthCalledWith(3, 'COMMIT');
-    expect(mockClient.release).toHaveBeenCalledTimes(1);
+    expect(mockClient.release).toHaveBeenCalledWith();
   });
 
-  it('ejecuta ROLLBACK y libera el PoolClient cuando ocurre un error en withTransaction()', async () => {
+  it('ejecuta ROLLBACK y libera el PoolClient normalmente cuando ROLLBACK tiene éxito', async () => {
     mockClient.query.mockResolvedValue({ rows: [], rowCount: 0 });
 
     await expect(
@@ -84,7 +101,50 @@ describe('PostgresService', () => {
 
     expect(mockClient.query).toHaveBeenNthCalledWith(1, 'BEGIN');
     expect(mockClient.query).toHaveBeenNthCalledWith(2, 'ROLLBACK');
-    expect(mockClient.release).toHaveBeenCalledTimes(1);
+    expect(mockClient.release).toHaveBeenCalledWith();
+  });
+
+  it('descarta el PoolClient dañado (release(true)) cuando falla ROLLBACK', async () => {
+    mockClient.query
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // BEGIN
+      .mockRejectedValueOnce(new Error('Conexión perdida durante ROLLBACK')); // ROLLBACK
+
+    await expect(
+      service.withTransaction(async () => {
+        throw new Error('Error previo en consulta transaccional');
+      }),
+    ).rejects.toThrow('Error previo en consulta transaccional');
+
+    expect(mockClient.query).toHaveBeenNthCalledWith(1, 'BEGIN');
+    expect(mockClient.query).toHaveBeenNthCalledWith(2, 'ROLLBACK');
+    expect(mockClient.release).toHaveBeenCalledWith(true);
+  });
+
+  it('descarta el PoolClient dañado (release(true)) cuando ocurre un error fatal de conexión (57P01)', async () => {
+    mockClient.query.mockResolvedValue({ rows: [], rowCount: 0 });
+
+    const fatalError = Object.assign(
+      new Error('terminating connection due to administrator command'),
+      { code: '57P01' },
+    );
+
+    await expect(
+      service.withTransaction(async () => {
+        throw fatalError;
+      }),
+    ).rejects.toThrow('terminating connection due to administrator command');
+
+    expect(mockClient.release).toHaveBeenCalledWith(true);
+  });
+
+  it('sanitiza cadenas de conexión y contraseñas en sanitizeDbErrorMessage()', () => {
+    const rawError = new Error(
+      'Connection failed for postgresql://sigeh_admin:SuperSecret123@127.0.0.1:5432/sigeh_db password=SuperSecret123',
+    );
+    const sanitized = sanitizeDbErrorMessage(rawError);
+
+    expect(sanitized).not.toContain('SuperSecret123');
+    expect(sanitized).toContain('[REDACTED]');
   });
 
   it('cierra el pool limpiamente en onModuleDestroy()', async () => {

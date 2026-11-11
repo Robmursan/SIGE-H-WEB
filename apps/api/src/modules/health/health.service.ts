@@ -3,10 +3,14 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { PostgresService } from '../../database/postgres.service.js';
+import {
+  PostgresService,
+  sanitizeDbErrorMessage,
+} from '../../database/postgres.service.js';
 import {
   HealthErrorResponseDto,
   HealthResponseDto,
+  LivenessResponseDto,
 } from './dto/health-response.dto.js';
 
 @Injectable()
@@ -15,15 +19,25 @@ export class HealthService {
 
   constructor(private readonly postgresService: PostgresService) {}
 
-  async checkHealth(): Promise<HealthResponseDto> {
+  checkLiveness(): LivenessResponseDto {
+    return {
+      status: 'ok',
+      service: 'sige-h-api',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  async checkReadiness(): Promise<HealthResponseDto> {
     const timestamp = new Date().toISOString();
     const schema = this.postgresService.getSchema();
 
     try {
-      const ping = await this.postgresService.ping();
+      const readiness = await this.postgresService.checkReadiness();
 
-      if (!ping.ok) {
-        throw new Error('Resultado inesperado en SELECT 1');
+      if (!readiness.ok || !readiness.schemaVerified) {
+        throw new Error(
+          `Esquema '${schema}' no disponible o verificación SELECT 1 inválida`,
+        );
       }
 
       return {
@@ -31,15 +45,15 @@ export class HealthService {
         service: 'sige-h-api',
         database: {
           status: 'up',
-          schema: ping.schema,
-          latencyMs: ping.latencyMs,
+          schema: readiness.schema,
+          schemaVerified: readiness.schemaVerified,
+          latencyMs: readiness.latencyMs,
         },
         timestamp,
       };
     } catch (error) {
-      const reason = error instanceof Error ? error.message : 'Unknown error';
       this.logger.warn(
-        `Verificación de salud PostgreSQL fallida en esquema '${schema}': ${reason}`,
+        `Verificación de readiness PostgreSQL fallida en esquema '${schema}': ${sanitizeDbErrorMessage(error)}`,
       );
 
       const errorPayload: HealthErrorResponseDto = {
@@ -48,6 +62,7 @@ export class HealthService {
         database: {
           status: 'down',
           schema,
+          schemaVerified: false,
         },
         message: 'Base de datos PostgreSQL no disponible',
         timestamp,
@@ -55,5 +70,9 @@ export class HealthService {
 
       throw new ServiceUnavailableException(errorPayload);
     }
+  }
+
+  async checkHealth(): Promise<HealthResponseDto> {
+    return this.checkReadiness();
   }
 }

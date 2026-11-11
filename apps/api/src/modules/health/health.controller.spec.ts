@@ -5,16 +5,16 @@ import { PostgresService } from '../../database/postgres.service.js';
 import { HealthController } from './health.controller.js';
 import { HealthService } from './health.service.js';
 
-describe('HealthController', () => {
+describe('HealthController (CU-OPS-01 / CU-OPS-02)', () => {
   let controller: HealthController;
   let mockPostgresService: {
-    ping: ReturnType<typeof vi.fn>;
+    checkReadiness: ReturnType<typeof vi.fn>;
     getSchema: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
     mockPostgresService = {
-      ping: vi.fn(),
+      checkReadiness: vi.fn(),
       getSchema: vi.fn().mockReturnValue('sigeh'),
     };
 
@@ -32,37 +32,60 @@ describe('HealthController', () => {
     controller = module.get<HealthController>(HealthController);
   });
 
-  it('retorna 200 (status ok) cuando SELECT 1 responde satisfactoriamente', async () => {
-    mockPostgresService.ping.mockResolvedValue({
-      ok: true,
-      schema: 'sigeh',
-      latencyMs: 3,
-    });
+  it('CU-OPS-01: getLiveness() retorna 200 ok sin consultar PostgreSQL', () => {
+    const response = controller.getLiveness();
 
-    const response = await controller.getHealth();
-
-    expect(mockPostgresService.ping).toHaveBeenCalledTimes(1);
+    expect(mockPostgresService.checkReadiness).not.toHaveBeenCalled();
     expect(response.status).toBe('ok');
     expect(response.service).toBe('sige-h-api');
-    expect(response.database).toEqual({
-      status: 'up',
-      schema: 'sigeh',
-      latencyMs: 3,
-    });
     expect(new Date(response.timestamp).toISOString()).toBe(response.timestamp);
   });
 
-  it('lanza ServiceUnavailableException (503) sanitizada cuando falla SELECT 1', async () => {
-    mockPostgresService.ping.mockRejectedValue(
-      new Error('connect ECONNREFUSED 127.0.0.1:5432'),
-    );
+  it('CU-OPS-02: getReadiness() y getHealth() retornan 200 cuando PostgreSQL y esquema sigeh están disponibles', async () => {
+    mockPostgresService.checkReadiness.mockResolvedValue({
+      ok: true,
+      schema: 'sigeh',
+      schemaVerified: true,
+      latencyMs: 2,
+    });
 
-    await expect(controller.getHealth()).rejects.toThrow(
+    const readyResponse = await controller.getReadiness();
+    const healthResponse = await controller.getHealth();
+
+    expect(mockPostgresService.checkReadiness).toHaveBeenCalledTimes(2);
+    expect(readyResponse.status).toBe('ok');
+    expect(readyResponse.database).toEqual({
+      status: 'up',
+      schema: 'sigeh',
+      schemaVerified: true,
+      latencyMs: 2,
+    });
+    expect(healthResponse.status).toBe('ok');
+  });
+
+  it('CU-OPS-02: getReadiness() lanza 503 cuando el esquema sigeh no existe aunque SELECT 1 responda', async () => {
+    mockPostgresService.checkReadiness.mockResolvedValue({
+      ok: false,
+      schema: 'sigeh',
+      schemaVerified: false,
+      latencyMs: 1,
+    });
+
+    await expect(controller.getReadiness()).rejects.toThrow(
       ServiceUnavailableException,
+    );
+  });
+
+  it('CU-OPS-02: getHealth() lanza ServiceUnavailableException (503) sanitizada cuando falla PostgreSQL', async () => {
+    mockPostgresService.checkReadiness.mockRejectedValue(
+      new Error(
+        'connect ECONNREFUSED postgresql://sigeh_admin:SecretPass@127.0.0.1:5432/sigeh_db',
+      ),
     );
 
     try {
       await controller.getHealth();
+      expect.unreachable('Debió lanzar ServiceUnavailableException');
     } catch (err) {
       const exception = err as ServiceUnavailableException;
       expect(exception.getStatus()).toBe(503);
@@ -73,9 +96,11 @@ describe('HealthController', () => {
         database: {
           status: 'down',
           schema: 'sigeh',
+          schemaVerified: false,
         },
         message: 'Base de datos PostgreSQL no disponible',
       });
+      expect(JSON.stringify(body)).not.toContain('SecretPass');
     }
   });
 });

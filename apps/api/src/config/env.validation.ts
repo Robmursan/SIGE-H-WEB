@@ -9,8 +9,42 @@ import {
   Matches,
   Max,
   Min,
+  MinLength,
   validateSync,
 } from 'class-validator';
+
+const FORBIDDEN_JWT_SECRETS = new Set([
+  'sigeh_jwt_secret_dev_2026',
+  'reemplazar_secret_jwt_en_entorno_local',
+  'reemplazar_secret_jwt_en_entorno_local_min_32_caracteres',
+  'changeme',
+  'secret',
+  'jwt_secret',
+  'default_jwt_secret',
+]);
+
+export function isInsecureJwtSecret(secret: unknown): boolean {
+  if (typeof secret !== 'string') {
+    return true;
+  }
+  const normalized = secret.trim().toLowerCase();
+  if (normalized.length < 32) {
+    return true;
+  }
+  if (FORBIDDEN_JWT_SECRETS.has(normalized)) {
+    return true;
+  }
+  if (
+    normalized.includes('reemplazar_en_entorno_local') ||
+    normalized.includes('reemplazar_secret') ||
+    normalized.includes('sigeh_jwt_secret_dev') ||
+    normalized.includes('placeholder') ||
+    normalized.includes('example')
+  ) {
+    return true;
+  }
+  return false;
+}
 
 export class EnvironmentVariables {
   @IsOptional()
@@ -68,17 +102,62 @@ export class EnvironmentVariables {
   @Type(() => Number)
   @IsInt()
   @Min(500)
+  @Max(300000)
   DB_IDLE_TIMEOUT_MS: number = 30000;
 
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(250)
+  @Max(60000)
   DB_CONNECT_TIMEOUT_MS: number = 5000;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1000)
+  @Max(120000)
+  DB_STATEMENT_TIMEOUT_MS: number = 15000;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(500)
+  @Max(60000)
+  DB_LOCK_TIMEOUT_MS: number = 5000;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1000)
+  @Max(120000)
+  DB_IDLE_IN_TX_TIMEOUT_MS: number = 30000;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1000)
+  @Max(120000)
+  DB_QUERY_TIMEOUT_MS: number = 15000;
 
   @IsOptional()
   @IsIn(['true', 'false'])
   SWAGGER_ENABLED: 'true' | 'false' = 'true';
+
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(32, {
+    message: 'JWT_SECRET must be at least 32 characters long',
+  })
+  JWT_SECRET!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^[1-9]\d*(s|m|h|d)$/, {
+    message:
+      'JWT_EXPIRATION must be a valid duration string (e.g. 15m, 8h, 1d)',
+  })
+  JWT_EXPIRATION: string = '8h';
 }
 
 export function validateEnv(
@@ -97,7 +176,13 @@ export function validateEnv(
     DB_POOL_MAX: config.DB_POOL_MAX ?? 10,
     DB_IDLE_TIMEOUT_MS: config.DB_IDLE_TIMEOUT_MS ?? 30000,
     DB_CONNECT_TIMEOUT_MS: config.DB_CONNECT_TIMEOUT_MS ?? 5000,
+    DB_STATEMENT_TIMEOUT_MS: config.DB_STATEMENT_TIMEOUT_MS ?? 15000,
+    DB_LOCK_TIMEOUT_MS: config.DB_LOCK_TIMEOUT_MS ?? 5000,
+    DB_IDLE_IN_TX_TIMEOUT_MS: config.DB_IDLE_IN_TX_TIMEOUT_MS ?? 30000,
+    DB_QUERY_TIMEOUT_MS: config.DB_QUERY_TIMEOUT_MS ?? 15000,
     SWAGGER_ENABLED: config.SWAGGER_ENABLED ?? 'true',
+    JWT_SECRET: config.JWT_SECRET,
+    JWT_EXPIRATION: config.JWT_EXPIRATION ?? '8h',
   };
 
   const validatedConfig = plainToInstance(EnvironmentVariables, mergedConfig, {
@@ -109,16 +194,27 @@ export function validateEnv(
     forbidUnknownValues: false,
   });
 
-  if (errors.length > 0) {
-    const details = errors
-      .map((err) => {
-        const constraints = err.constraints
-          ? Object.values(err.constraints).join(', ')
-          : 'invalid value';
-        return `${err.property}: ${constraints}`;
-      })
-      .join('; ');
-    throw new Error(`Configuración de variables de entorno inválida: ${details}`);
+  const failureMessages = errors.map((err) => {
+    const constraints = err.constraints
+      ? Object.values(err.constraints).join(', ')
+      : 'invalid value';
+    return `${err.property}: ${constraints}`;
+  });
+
+  if (
+    typeof mergedConfig.JWT_SECRET === 'string' &&
+    mergedConfig.JWT_SECRET.length >= 32 &&
+    isInsecureJwtSecret(mergedConfig.JWT_SECRET)
+  ) {
+    failureMessages.push(
+      'JWT_SECRET: default, example or placeholder JWT_SECRET is forbidden',
+    );
+  }
+
+  if (failureMessages.length > 0) {
+    throw new Error(
+      `Configuración de variables de entorno inválida: ${failureMessages.join('; ')}`,
+    );
   }
 
   return validatedConfig;
