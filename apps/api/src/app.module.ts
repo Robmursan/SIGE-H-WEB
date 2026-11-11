@@ -1,7 +1,11 @@
 import { Module } from '@nestjs/common';
-import { createObserveModule } from '@nestjs/observe';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
+import { validateEnv } from './config/env.validation.js';
+import { DatabaseModule } from './database/database.module.js';
+import { HealthModule } from './modules/health/health.module.js';
 import { IamModule } from './modules/iam/iam.module.js';
 import { OrganizacionModule } from './modules/organizacion/organizacion.module.js';
 import { PersonalModule } from './modules/personal/personal.module.js';
@@ -10,18 +14,31 @@ import { AsistenciaModule } from './modules/asistencia/asistencia.module.js';
 import { CoberturaModule } from './modules/cobertura/cobertura.module.js';
 import { BalancesModule } from './modules/balances/balances.module.js';
 
-export const { ObserveModule, ObserveInstrument } = createObserveModule();
-
 @Module({
   imports: [
-    // Distributed tracing, auto-correlated logs, request/job metrics, error
-    // telemetry, alarms, and more — out of the box. Sign up at https://observe.nestjs.com,
-    // then run `npx @nestjs/observe link` to write your key pair into .env.
-    ObserveModule.forRoot({
-      appKey: process.env.OBSERVE_APP_KEY ?? 'YOUR_APP_KEY',
-      appSecret: process.env.OBSERVE_APP_SECRET ?? 'YOUR_APP_SECRET',
-      serviceId: 'api',
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+      validate: validateEnv,
     }),
+    DatabaseModule,
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        host: config.get<string>('DB_HOST', '127.0.0.1'),
+        port: Number(config.get<number>('DB_PORT', 5432)),
+        username: config.getOrThrow<string>('DB_USER'),
+        password: config.getOrThrow<string>('DB_PASSWORD'),
+        database: config.getOrThrow<string>('DB_NAME'),
+        schema: config.get<string>('DB_SCHEMA', 'sigeh'),
+        autoLoadEntities: true,
+        synchronize: false,
+        logging: ['error', 'warn'],
+      }),
+    }),
+    HealthModule,
     IamModule,
     OrganizacionModule,
     PersonalModule,
