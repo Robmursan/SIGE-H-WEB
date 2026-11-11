@@ -7,9 +7,10 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
+import { API_CONTRACT } from './config/api-contract.js';
 
 export function configureApp(app: INestApplication): void {
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix(API_CONTRACT.globalPrefix);
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -34,7 +35,7 @@ export function configureApp(app: INestApplication): void {
       .setDescription(
         'Sistema Integral de Gestión de Enfermería Hospitalaria - API REST',
       )
-      .setVersion('1.0.0')
+      .setVersion(API_CONTRACT.version)
       .addBearerAuth()
       .build();
 

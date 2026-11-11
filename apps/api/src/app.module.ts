@@ -12,6 +12,7 @@ import { ProgramacionModule } from './modules/programacion/programacion.module.j
 import { AsistenciaModule } from './modules/asistencia/asistencia.module.js';
 import { CoberturaModule } from './modules/cobertura/cobertura.module.js';
 import { BalancesModule } from './modules/balances/balances.module.js';
+import { OperacionesModule } from './modules/operaciones/operaciones.module.js';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { BalancesModule } from './modules/balances/balances.module.js';
     AsistenciaModule,
     CoberturaModule,
     BalancesModule,
+    OperacionesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

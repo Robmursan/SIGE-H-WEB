@@ -5,9 +5,9 @@ import { Pool } from 'pg';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { AppModule } from '../src/app.module.js';
-import { PostgresService } from '../src/database/postgres.service.js';
-import { configureApp } from '../src/main.js';
+import { AppModule } from '../../src/app.module.js';
+import { PostgresService } from '../../src/database/postgres.service.js';
+import { configureApp } from '../../src/main.js';
 
 describe('SIGE-H Sprint 0.2 — Infraestructura, Transacciones, Liveness/Readiness y Swagger (e2e)', () => {
   let app: INestApplication<App>;
@@ -283,6 +283,7 @@ describe('SIGE-H Sprint 0.2 — Infraestructura, Transacciones, Liveness/Readine
       '/api/v1/health/live',
       '/api/v1/health/ready',
       '/api/v1/health',
+      '/api/v1/meta/version',
     ]);
 
     expect(

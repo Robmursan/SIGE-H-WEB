@@ -1,0 +1,7 @@
+# Includes dependency symlinks used by isolated local worktrees.
+**/node_modules
+.venv/
+.env
+.env.*
+!.env.example
+*.log
