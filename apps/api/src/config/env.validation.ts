@@ -23,6 +23,71 @@ const FORBIDDEN_JWT_SECRETS = new Set([
   'default_jwt_secret',
 ]);
 
+/**
+ * Límites explícitos de expiración para JWT_EXPIRATION (access token):
+ * - Mínimo: 60 segundos (1 minuto).
+ * - Máximo: 43,200 segundos (12 horas), alineado con la duración máxima de una
+ *   jornada hospitalaria/acumulada sin permitir access tokens de varios días o años
+ *   ni desbordamientos numéricos (overflow).
+ *
+ * NOTA ARQUITECTÓNICA (Sprint 0.2):
+ * Esta validación sanea exclusivamente la variable de entorno al arranque.
+ * La emisión, validación criptográfica de tokens, revocación y guards de autorización
+ * pertenecen al módulo IAM (Sprint 1 / migración V2) y NO están implementados aún.
+ */
+export const MIN_JWT_EXPIRATION_SECONDS = 60;
+export const MAX_JWT_EXPIRATION_SECONDS = 43200;
+
+const DURATION_UNIT_SECONDS: Record<string, number> = {
+  s: 1,
+  m: 60,
+  h: 3600,
+  d: 86400,
+};
+
+export function parseJwtExpirationSeconds(value: unknown): number | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const match = /^([1-9]\d*)(s|m|h|d)$/.exec(value.trim());
+  if (!match) {
+    return null;
+  }
+
+  const rawMagnitude = match[1];
+  const unit = match[2];
+
+  if (rawMagnitude.length > 10) {
+    return null;
+  }
+
+  const magnitude = Number(rawMagnitude);
+  const multiplier = DURATION_UNIT_SECONDS[unit];
+
+  if (
+    !Number.isSafeInteger(magnitude) ||
+    magnitude <= 0 ||
+    multiplier === undefined
+  ) {
+    return null;
+  }
+
+  const totalSeconds = magnitude * multiplier;
+  if (!Number.isSafeInteger(totalSeconds)) {
+    return null;
+  }
+
+  if (
+    totalSeconds < MIN_JWT_EXPIRATION_SECONDS ||
+    totalSeconds > MAX_JWT_EXPIRATION_SECONDS
+  ) {
+    return null;
+  }
+
+  return totalSeconds;
+}
+
 export function isInsecureJwtSecret(secret: unknown): boolean {
   if (typeof secret !== 'string') {
     return true;
@@ -155,14 +220,28 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   @Matches(/^[1-9]\d*(s|m|h|d)$/, {
     message:
-      'JWT_EXPIRATION must be a valid duration string (e.g. 15m, 8h, 1d)',
+      'JWT_EXPIRATION must be a valid duration string (e.g. 15m, 8h, max 12h / 43200s)',
   })
   JWT_EXPIRATION: string = '8h';
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(MIN_JWT_EXPIRATION_SECONDS, {
+    message: `JWT_EXPIRATION_SECONDS must not be less than ${MIN_JWT_EXPIRATION_SECONDS} seconds (1m)`,
+  })
+  @Max(MAX_JWT_EXPIRATION_SECONDS, {
+    message: `JWT_EXPIRATION_SECONDS must not exceed ${MAX_JWT_EXPIRATION_SECONDS} seconds (12h)`,
+  })
+  JWT_EXPIRATION_SECONDS: number = 28800;
 }
 
 export function validateEnv(
   config: Record<string, unknown>,
 ): EnvironmentVariables {
+  const rawJwtExpiration = config.JWT_EXPIRATION ?? '8h';
+  const parsedJwtExpirationSeconds =
+    parseJwtExpirationSeconds(rawJwtExpiration);
+
   const mergedConfig: Record<string, unknown> = {
     NODE_ENV: config.NODE_ENV ?? 'development',
     PORT: config.PORT ?? 3000,
@@ -182,7 +261,8 @@ export function validateEnv(
     DB_QUERY_TIMEOUT_MS: config.DB_QUERY_TIMEOUT_MS ?? 15000,
     SWAGGER_ENABLED: config.SWAGGER_ENABLED ?? 'true',
     JWT_SECRET: config.JWT_SECRET,
-    JWT_EXPIRATION: config.JWT_EXPIRATION ?? '8h',
+    JWT_EXPIRATION: rawJwtExpiration,
+    JWT_EXPIRATION_SECONDS: parsedJwtExpirationSeconds ?? -1,
   };
 
   const validatedConfig = plainToInstance(EnvironmentVariables, mergedConfig, {
@@ -200,6 +280,12 @@ export function validateEnv(
       : 'invalid value';
     return `${err.property}: ${constraints}`;
   });
+
+  if (parsedJwtExpirationSeconds === null) {
+    failureMessages.push(
+      `JWT_EXPIRATION: must be a finite duration between ${MIN_JWT_EXPIRATION_SECONDS}s (1m) and ${MAX_JWT_EXPIRATION_SECONDS}s (12h)`,
+    );
+  }
 
   if (
     typeof mergedConfig.JWT_SECRET === 'string' &&

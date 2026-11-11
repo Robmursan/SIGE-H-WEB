@@ -84,29 +84,77 @@ export class PostgresService implements OnModuleDestroy {
     return this.pool.connect();
   }
 
+  /**
+   * Ejecuta una unidad de trabajo dentro de una transacción PostgreSQL en el mismo PoolClient.
+   *
+   * Garantías de integridad transaccional (Sprint 0.2):
+   * 1. Verificación explícita de COMMIT: Si el callback captura/silencia un error SQL dentro del
+   *    bloque transaccional, PostgreSQL marca la transacción como abortada (`25P02`) y al recibir
+   *    `COMMIT` ejecuta internamente un rollback devolviendo `command: 'ROLLBACK'`. Este método
+   *    verifica explícitamente que `commitResult.command === 'COMMIT'`; de lo contrario, lanza un
+   *    error explícito y nunca reporta éxito falso.
+   * 2. Resultado incierto tras enviar COMMIT (`COMMIT_OUTCOME_UNCERTAIN`): Si la conexión se pierde
+   *    o falla mientras `COMMIT` está en vuelo, el estado real en el servidor es incierto (la
+   *    transacción pudo haberse confirmado o no antes del corte de red). En ese escenario:
+   *    - El PoolClient se descarta inmediatamente (`client.release(true)`).
+   *    - No se intenta `ROLLBACK` sobre una conexión rota ni se oculta el error original.
+   *    - NO se realizan reintentos automáticos de escrituras sin clave de idempotencia y
+   *      reconciliación explícita de estado.
+   * 3. Preservación de causa raíz: Cualquier fallo durante `ROLLBACK` descarta el cliente del pool
+   *    y se registra sanitizado en logs, pero jamás reemplaza ni oculta el error original.
+   */
   async withTransaction<T>(
     work: (client: PoolClient) => Promise<T>,
   ): Promise<T> {
     const client = await this.pool.connect();
     let txStarted = false;
+    let commitInFlight = false;
+    let commitResolvedByServer = false;
     let discardClient = false;
 
     try {
-      await client.query('BEGIN');
+      const beginResult = await client.query('BEGIN');
+      if (!beginResult || beginResult.command !== 'BEGIN') {
+        discardClient = true;
+        throw new Error(
+          `No se pudo iniciar la transacción PostgreSQL: respuesta inesperada '${beginResult?.command ?? 'UNKNOWN'}' en BEGIN.`,
+        );
+      }
       txStarted = true;
+
       const result = await work(client);
-      await client.query('COMMIT');
+
+      commitInFlight = true;
+      const commitResult = await client.query('COMMIT');
+      commitInFlight = false;
+      commitResolvedByServer = true;
+
+      if (!commitResult || commitResult.command !== 'COMMIT') {
+        const actualCommand = commitResult?.command ?? 'UNKNOWN';
+        throw new Error(
+          `Transacción abortada: PostgreSQL devolvió '${actualCommand}' al ejecutar COMMIT; una consulta previa falló dentro de la transacción y fue silenciada por el callback.`,
+        );
+      }
+
       return result;
     } catch (error) {
       if (isFatalConnectionError(error)) {
         discardClient = true;
       }
 
-      if (!txStarted) {
+      if (commitInFlight) {
         discardClient = true;
-      } else {
+        this.logger.warn(
+          `[COMMIT_OUTCOME_UNCERTAIN] Fallo durante COMMIT transaccional; resultado incierto en PostgreSQL, cliente descartado del pool y sin reintento automático sin idempotencia/reconciliación: ${sanitizeDbErrorMessage(error)}`,
+        );
+      } else if (!txStarted) {
+        discardClient = true;
+      } else if (!commitResolvedByServer) {
         try {
-          await client.query('ROLLBACK');
+          const rollbackResult = await client.query('ROLLBACK');
+          if (!rollbackResult || rollbackResult.command !== 'ROLLBACK') {
+            discardClient = true;
+          }
         } catch (rollbackError) {
           discardClient = true;
           this.logger.error(
@@ -114,6 +162,7 @@ export class PostgresService implements OnModuleDestroy {
           );
         }
       }
+
       throw error;
     } finally {
       if (discardClient) {

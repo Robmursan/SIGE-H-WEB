@@ -67,8 +67,15 @@ describe('PostgresService', () => {
     expect(res.schemaVerified).toBe(true);
   });
 
-  it('ejecuta BEGIN, trabajo y COMMIT en el mismo PoolClient durante withTransaction()', async () => {
-    mockClient.query.mockResolvedValue({ rows: [], rowCount: 0 });
+  it('ejecuta BEGIN, trabajo y COMMIT verificando command === COMMIT en el mismo PoolClient durante withTransaction()', async () => {
+    mockClient.query
+      .mockResolvedValueOnce({ command: 'BEGIN', rows: [], rowCount: null })
+      .mockResolvedValueOnce({
+        command: 'SELECT',
+        rows: [{ '?column?': 1 }],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({ command: 'COMMIT', rows: [], rowCount: null });
 
     const output = await service.withTransaction(async (client) => {
       await client.query(
@@ -90,8 +97,63 @@ describe('PostgresService', () => {
     expect(mockClient.release).toHaveBeenCalledWith();
   });
 
+  it('lanza error y NO reporta éxito cuando el callback captura internamente un error SQL y PostgreSQL devuelve ROLLBACK al ejecutar COMMIT', async () => {
+    mockClient.query
+      .mockResolvedValueOnce({ command: 'BEGIN', rows: [], rowCount: null })
+      .mockRejectedValueOnce(
+        Object.assign(new Error('division by zero'), { code: '22012' }),
+      )
+      .mockResolvedValueOnce({ command: 'ROLLBACK', rows: [], rowCount: null });
+
+    await expect(
+      service.withTransaction(async (client) => {
+        try {
+          await client.query('SELECT 1 / 0');
+        } catch {
+          // El callback captura y silencia erróneamente la excepción SQL
+        }
+        return 'falso-exito';
+      }),
+    ).rejects.toThrow(
+      /Transacción abortada: PostgreSQL devolvió 'ROLLBACK' al ejecutar COMMIT/,
+    );
+
+    expect(mockClient.query).toHaveBeenNthCalledWith(1, 'BEGIN');
+    expect(mockClient.query).toHaveBeenNthCalledWith(2, 'SELECT 1 / 0');
+    expect(mockClient.query).toHaveBeenNthCalledWith(3, 'COMMIT');
+    expect(mockClient.query).toHaveBeenCalledTimes(3);
+    expect(mockClient.release).toHaveBeenCalledWith();
+  });
+
+  it('descarta el cliente (release(true)), no reintenta escrituras y preserva el error cuando se pierde la conexión durante COMMIT (resultado incierto)', async () => {
+    const networkLossOnCommit = Object.assign(
+      new Error('Connection terminated unexpectedly during COMMIT'),
+      { code: '08006' },
+    );
+
+    mockClient.query
+      .mockResolvedValueOnce({ command: 'BEGIN', rows: [], rowCount: null })
+      .mockResolvedValueOnce({ command: 'SELECT', rows: [], rowCount: 1 })
+      .mockRejectedValueOnce(networkLossOnCommit);
+
+    await expect(
+      service.withTransaction(async (client) => {
+        await client.query('SELECT 1');
+        return 'ok';
+      }),
+    ).rejects.toThrow('Connection terminated unexpectedly during COMMIT');
+
+    expect(mockClient.query).toHaveBeenNthCalledWith(1, 'BEGIN');
+    expect(mockClient.query).toHaveBeenNthCalledWith(2, 'SELECT 1');
+    expect(mockClient.query).toHaveBeenNthCalledWith(3, 'COMMIT');
+    expect(mockClient.query).toHaveBeenCalledTimes(3);
+    expect(mockClient.release).toHaveBeenCalledWith(true);
+  });
+
   it('ejecuta ROLLBACK y libera el PoolClient normalmente cuando ROLLBACK tiene éxito', async () => {
-    mockClient.query.mockResolvedValue({ rows: [], rowCount: 0 });
+    mockClient.query
+      .mockResolvedValueOnce({ command: 'BEGIN', rows: [], rowCount: null })
+      .mockResolvedValueOnce({ command: 'ROLLBACK', rows: [], rowCount: null });
 
     await expect(
       service.withTransaction(async () => {
@@ -104,9 +166,9 @@ describe('PostgresService', () => {
     expect(mockClient.release).toHaveBeenCalledWith();
   });
 
-  it('descarta el PoolClient dañado (release(true)) cuando falla ROLLBACK', async () => {
+  it('descarta el PoolClient dañado (release(true)) cuando falla ROLLBACK sin ocultar el error original', async () => {
     mockClient.query
-      .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // BEGIN
+      .mockResolvedValueOnce({ command: 'BEGIN', rows: [], rowCount: null }) // BEGIN
       .mockRejectedValueOnce(new Error('Conexión perdida durante ROLLBACK')); // ROLLBACK
 
     await expect(
@@ -121,7 +183,9 @@ describe('PostgresService', () => {
   });
 
   it('descarta el PoolClient dañado (release(true)) cuando ocurre un error fatal de conexión (57P01)', async () => {
-    mockClient.query.mockResolvedValue({ rows: [], rowCount: 0 });
+    mockClient.query
+      .mockResolvedValueOnce({ command: 'BEGIN', rows: [], rowCount: null })
+      .mockResolvedValueOnce({ command: 'ROLLBACK', rows: [], rowCount: null });
 
     const fatalError = Object.assign(
       new Error('terminating connection due to administrator command'),

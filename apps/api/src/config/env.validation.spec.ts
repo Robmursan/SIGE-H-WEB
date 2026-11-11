@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { validateEnv } from './env.validation.js';
+import {
+  MAX_JWT_EXPIRATION_SECONDS,
+  MIN_JWT_EXPIRATION_SECONDS,
+  parseJwtExpirationSeconds,
+  validateEnv,
+} from './env.validation.js';
 
 describe('validateEnv', () => {
   const validBaseEnv = {
@@ -30,6 +35,88 @@ describe('validateEnv', () => {
     expect(result.DB_QUERY_TIMEOUT_MS).toBe(15000);
     expect(result.SWAGGER_ENABLED).toBe('true');
     expect(result.JWT_EXPIRATION).toBe('8h');
+    expect(result.JWT_EXPIRATION_SECONDS).toBe(28800);
+  });
+
+  it('acepta valores de JWT_EXPIRATION exactamente en las fronteras mínima (60s/1m) y máxima (12h/43200s)', () => {
+    const minResult = validateEnv({
+      ...validBaseEnv,
+      JWT_EXPIRATION: '60s',
+    });
+    expect(minResult.JWT_EXPIRATION_SECONDS).toBe(MIN_JWT_EXPIRATION_SECONDS);
+
+    const minMinuteResult = validateEnv({
+      ...validBaseEnv,
+      JWT_EXPIRATION: '1m',
+    });
+    expect(minMinuteResult.JWT_EXPIRATION_SECONDS).toBe(60);
+
+    const maxHourResult = validateEnv({
+      ...validBaseEnv,
+      JWT_EXPIRATION: '12h',
+    });
+    expect(maxHourResult.JWT_EXPIRATION_SECONDS).toBe(
+      MAX_JWT_EXPIRATION_SECONDS,
+    );
+
+    const maxSecondResult = validateEnv({
+      ...validBaseEnv,
+      JWT_EXPIRATION: '43200s',
+    });
+    expect(maxSecondResult.JWT_EXPIRATION_SECONDS).toBe(43200);
+  });
+
+  it('rechaza valores de JWT_EXPIRATION por debajo del mínimo, por encima del máximo, unidades inválidas y desbordamientos numéricos', () => {
+    // Debajo de frontera mínima (59s < 60s)
+    expect(() =>
+      validateEnv({
+        ...validBaseEnv,
+        JWT_EXPIRATION: '59s',
+      }),
+    ).toThrow(/JWT_EXPIRATION/);
+
+    // Por encima de frontera máxima (43201s > 43200s, 13h > 12h, 1d = 86400s > 43200s, 365d)
+    for (const excessive of ['43201s', '721m', '13h', '1d', '365d']) {
+      expect(() =>
+        validateEnv({
+          ...validBaseEnv,
+          JWT_EXPIRATION: excessive,
+        }),
+      ).toThrow(/JWT_EXPIRATION/);
+    }
+
+    // Unidades inválidas, cero o negativos
+    for (const invalidUnit of [
+      'invalid-duration',
+      '500ms',
+      '2w',
+      '1y',
+      '0s',
+      '-5m',
+      '8h ',
+    ]) {
+      expect(() =>
+        validateEnv({
+          ...validBaseEnv,
+          JWT_EXPIRATION: invalidUnit,
+        }),
+      ).toThrow(/JWT_EXPIRATION/);
+    }
+
+    // Valores enormes y desbordamientos numéricos (overflow > MAX_SAFE_INTEGER)
+    for (const overflowValue of [
+      '999999999999999999999999999999d',
+      '9007199254740993s',
+      '100000000000h',
+    ]) {
+      expect(parseJwtExpirationSeconds(overflowValue)).toBeNull();
+      expect(() =>
+        validateEnv({
+          ...validBaseEnv,
+          JWT_EXPIRATION: overflowValue,
+        }),
+      ).toThrow(/JWT_EXPIRATION/);
+    }
   });
 
   it('lanza error cuando faltan credenciales de BD o JWT_SECRET', () => {
