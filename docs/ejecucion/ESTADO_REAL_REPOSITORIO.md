@@ -29,3 +29,9 @@ CU-OPS-03 implementado en OperacionesModule: GET /api/v1/meta/version. Constante
 Prueba runtime compilada, sin overrides: metadata 200, liveness 200, readiness 503 por ausencia intencional de socket PG y Swagger 200. OpenAPI generado con cinco rutas. Ver AVANCE_FUNCIONAL.md para comandos/resultados, límites y listado exacto de archivos.
 
 Referencias de framework contrastadas con documentación primaria consultada el 2026-11-11: https://docs.nestjs.com/openapi/introduction y https://docs.nestjs.com/fundamentals/testing. Se conservaron las APIs presentes en dependencias locales; no se añadió librería.
+
+## Corte B1 — preservación
+
+Se verificaron los tres worktrees existentes y todas las ramas antes de crear feat/codex-b1-iam-org en /home/robreport/Documents/SIGE-H-b1-iam-org desde 0d86ce06b3c8b8f182bcbf62025b2ad2449c2771. B0 y el orquestador estaban limpios; main conservaba exactamente los cambios IAM/fuentes ajenos. No merge/push/reset/restore ni cambio de ramas ajenas. Para no escribir incrementalmente fuera del sandbox se preparó/verificó una copia de trabajo en /tmp/SIGE-H-b1-check; la entrega final se traslada al worktree persistente verificando hashes.
+
+B1 no añade controllers IAM/ORG: el OpenAPI sigue con cinco rutas B0. Los casos internos de organización existen en DI pero la identidad runtime deniega todo antes de acceder a datos. No hay autenticación ni organización utilizable por HTTP aún. QA y propuestas SQL son artefactos sin aplicación. Docker actual permanece publicado en todas las interfaces, sin modificación.

@@ -436,3 +436,9 @@ Contratos oficiales del bloque (no publicados por este plan):
 - `CU-DOC-15`: `POST /supervision-calidad/hallazgos` — P2/FUT.
 - `CU-DOC-16`: `POST /supervision-calidad/hallazgos/{hallazgoId}/seguimientos` — P2/FUT.
 - `CU-DOC-17`: `GET /supervision-calidad/indicadores` — P2/FUT.
+
+## Corte B1 — avance sin exposición de negocio
+
+Worktree persistente /home/robreport/Documents/SIGE-H-b1-iam-org, rama feat/codex-b1-iam-org desde 0d86ce0 exacto. Cuatro lecturas ORG (01/04/07/10) y política IAM/adapter de asignaciones preparados, no publicados. ADR-B1 detalla comparación IdP/local y requisitos para habilitar IAM. QA definida con proyecto/volumen/rol/puerto separados; no iniciada ni validada con PostgreSQL. No se modifica PROP de OPS-03 ni estados de fuente AC/PROP/FUT.
+
+Próximo tramo del camino crítico: decisión identidad → baseline QA saneada/autorizada + rol → integración SQL de catálogos/aislamiento → IAM-01..04 con revocación real → exponer ORG lectura y conectar selector Angular/Android. No se considera bloque B1 de negocio terminado por preparar esos componentes.

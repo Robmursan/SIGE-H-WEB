@@ -102,8 +102,8 @@ describe('SIGE-H Sprint 0.2 — Infraestructura, Transacciones, Liveness/Readine
   it('verifica en modo solo lectura las 51 tablas maestras y los timeouts de sesión en PostgreSQL', async () => {
     const tableCountResult = await postgresService.query<{ total: number }>(
       `SELECT count(*)::int AS total
-       FROM information_schema.tables
-       WHERE table_schema = $1 AND table_type = 'BASE TABLE'`,
+       FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = $1 AND c.relkind IN ('r', 'p')`,
       ['sigeh'],
     );
     expect(tableCountResult.rows[0]?.total).toBe(51);

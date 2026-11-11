@@ -46,3 +46,35 @@ Siguiente bloque recomendado: B1 tras decisión IdP/local y destino QA; comenzar
 ## Archivos de entrega
 
 La relación exacta se conserva en ARCHIVOS_B0.md; incluye fuentes locales suministradas copiadas literalmente a esta rama, sin modificar originales en main. No se incorporaron archivos IAM ajenos.
+
+
+## Entrega B1 — IAM y organización preparados sin exposición
+
+Rama dedicada: feat/codex-b1-iam-org. Worktree persistente: /home/robreport/Documents/SIGE-H-b1-iam-org. Base exacta preservada: 0d86ce06b3c8b8f182bcbf62025b2ad2449c2771. El commit de entrega es el que introduce este apartado; git log en esa rama proporciona su SHA completo. B0 y cambios ajenos no se mezclan ni se eliminan.
+
+Estado técnico: CU-ORG-01/04/07/10 (fuente AC) PREPARADO_NO_PUBLICADO. Cuatro consultas V1 de hospitales/divisiones/servicios/subáreas con DTO validado, paginación, policy de ámbitos, adapter parametrizado y use case inyectado. IAM tiene repositorio de asignaciones/permisos y política reutilizable; IAM-13 (PROP) preparación parcial, no endpoint terminado. Ningún CU IAM/ORG se declara IMPLEMENTADO ni aprobado institucionalmente. Ver ALCANCE_B1.md para los 29 CU y su situación exacta. OPS-03 permanece PROP y funcional según B0.
+
+La implementación actual de IdentityVerifier rechaza siempre: no decodifica JWT sin verificar, no confía en claims/actor de request y no acepta bypass por entorno. No se montaron controllers IAM/ORG; Swagger sigue exactamente con cinco rutas B0. Acceder con o sin header de autorización a organización/login devuelve 404; eso prueba ausencia de exposición, no autenticación real. No hay nuevos endpoints protegidos utilizables ni UI de negocio habilitada.
+
+Autorización preparada: cuenta y jerarquía activas; vigencias [desde,hasta) con hora de servidor PG; rol_permisos persistido; no ADMIN_SISTEMA mágico; ámbito de servicio no enumera otros servicios. El SQL final revalida todo en el mismo statement y filtra rutas de ancestros. No escribe BD, no cachea permisos, no emite eventos ni declara cobertura/offline.
+
+QA: Compose separado, loopback 55432, red/volumen/base/rol independientes, secreto por archivo, sin auto-importación SQL. Solo se validó config --quiet (salida 0), sin up/pull/create ni conexiones PG. La propuesta de corrección 5432 compartido a localhost no fue aplicada: consumidores LAN desconocidos. El preflight de integración está preparado para rechazar rol elevado/miembro de roles elevados, DML/DDL, falta de esquema o baseline V1 distinta de 51 tablas; no se ejecutó contra PostgreSQL.
+
+SQL propuesto y NO ejecutado: sesiones/refresh, credenciales locales alternativa a OIDC, vínculo issuer/subject, rol QA read-only y fixtures exclusivamente sintéticos sin empleados/credenciales. No se alteró ni recreó ninguna tabla V1. Elegir únicamente propuestas pertinentes tras decidir identidad; faltan aprobaciones separadas de infraestructura, baseline, datos QA y privilegios.
+
+### Calidad observada B1
+
+- npm run lint: OK, sin warnings finales. Advertencia inicial de coerción de limit corregida con tipos estrictos antes del cierre.
+- npm run build: OK.
+- npm test: 64/64, siete archivos. Política real de dominio, DTO y adapters unitarios; fixtures/mocks de adapters solo en tests, sin atribuirles integración SQL.
+- npm run test:e2e: 17/17, dos archivos. HTTP Nest real con tripwire PG; rutas de negocio ausentes, DI interna deny-by-default y regresión OPS/Swagger.
+- npm run test:smoke: OK sobre backend compilado sin overrides; versión/liveness 200, readiness 503 con socket PG intencionalmente inexistente, Swagger 200; cinco rutas y OpenAPI idéntico a B0.
+- npm run test:integration: bloqueado con salida 1 antes de importar AppModule, sin opt-in/QA. Ocho escenarios de organización SQL preparados; no ejecutados. Tampoco se ejecuta la suite SQL heredada.
+- Docker Compose config --quiet: salida 0 con archivo externo temporal de validación, sin mostrar contenido ni iniciar servicios. No prueba disponibilidad de imagen, secreto real, firewall ni baseline.
+- Huella SQL maestro V1: intacta. No rutas IAM/ORG decoradas ni SQL de mutación en runtime. Lista exacta de cambios en ARCHIVOS_B1.md. Revisión dirigida en docs/pruebas/B1-evidencia.md.
+
+Cómo repetir pruebas seguras: desde apps/api, npm run lint, npm run build, npm test, npm run test:e2e y npm run test:smoke. E2E/smoke requieren bind loopback temporal. No configurar .env institucional. Dependencias instaladas reutilizadas por symlink local ignorado; no se añadió librería ni se cambió package-lock. La ejecución SQL requiere los gates de infra/qa/README.md y aprobación humana; no se inicia como parte de tests por defecto.
+
+Bloqueos vigentes: identidad autorizada, matriz de lectura organizativa ratificada, QA saneada/rol efectivo y prueba SQL real. Token revocado, refresh replay y logout no tienen implementación comprobable: pruebas explícitamente pendientes, sin tokens ficticios aceptados. No hay frontend conectado ni autorización offline; historia, concurrencia de writes y sesiones esperan sus flujos reales.
+
+Siguiente bloque funcional: resolver identidad/QA, validar lecturas preparadas contra PostgreSQL aislado y abrir IAM-01..04 + ORG-01/04/07/10 únicamente con autorización efectiva y pruebas de sesión/revocación, después conectar selector de ámbito y personal.

@@ -29,35 +29,35 @@ Ciclo DOT↔CAL: empezar por catálogos CAL y lecturas ORG/PER; después objetiv
 
 | CU | Objetivo | Actor | Contrato propuesto bajo /api/v1 | Prioridad | Fuente | Dependencias de módulo | Avance verificado |
 |---|---|---|---|---|---|---|---|
-| CU-IAM-01 | Iniciar sesión y emitir tokens | Operador | POST /auth/login | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | PENDIENTE; no implementado en base |
-| CU-IAM-02 | Renovar token | Operador | POST /auth/refresh | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | PENDIENTE; no implementado en base |
-| CU-IAM-03 | Cerrar sesión y revocar sesión | Operador | POST /auth/logout | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | PENDIENTE; no implementado en base |
-| CU-IAM-04 | Consultar perfil y alcances propios | Operador | GET /auth/me | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | PENDIENTE; no implementado en base |
-| CU-IAM-05 | Listar sesiones activas del usuario | Operador | GET /auth/sessions | P1 | PROP | DatabaseModule, PolicyEngine y catálogo de ámbitos. | PENDIENTE; no implementado en base |
-| CU-IAM-06 | Revocar sesión en otro dispositivo | Operador | DELETE /auth/sessions/{sessionId} | P1 | PROP | DatabaseModule, PolicyEngine y catálogo de ámbitos. | PENDIENTE; no implementado en base |
-| CU-IAM-07 | Dar de alta cuenta de acceso | Administrador | POST /usuarios | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | PENDIENTE; no implementado en base |
-| CU-IAM-08 | Consultar y filtrar cuentas | Administrador | GET /usuarios | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | PENDIENTE; no implementado en base |
-| CU-IAM-09 | Modificar o bloquear cuenta | Administrador | PATCH /usuarios/{usuarioId} | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | PENDIENTE; no implementado en base |
-| CU-IAM-10 | Listar roles y permisos | Administrador | GET /roles | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | PENDIENTE; no implementado en base |
-| CU-IAM-11 | Asignar rol y alcance temporal | Administrador | POST /usuarios/{usuarioId}/roles | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | PENDIENTE; no implementado en base |
-| CU-IAM-12 | Revocar asignación de rol | Administrador | DELETE /usuarios/{usuarioId}/roles/{usuarioRolId} | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | PENDIENTE; no implementado en base |
-| CU-IAM-13 | Consultar permisos efectivos de usuario | Administrador | GET /usuarios/{usuarioId}/permisos-efectivos | P0 | PROP | DatabaseModule, PolicyEngine y catálogo de ámbitos. | PENDIENTE; no implementado en base |
-| CU-IAM-14 | Consultar matriz de autorizaciones vigente | Autoridad | GET /politicas-autorizacion | P0 | PROP | DatabaseModule, PolicyEngine y catálogo de ámbitos. | PENDIENTE; no implementado en base |
-| CU-IAM-15 | Aprobar/revisar cambio de matriz de autorización | Jefatura | POST /politicas-autorizacion/versiones | P1 | PROP | DatabaseModule, PolicyEngine y catálogo de ámbitos. | PENDIENTE; no implementado en base |
-| CU-IAM-16 | Consultar auditoría de accesos denegados | Auditor | GET /auditorias/accesos | P1 | PROP | DatabaseModule, PolicyEngine y catálogo de ámbitos. | PENDIENTE; no implementado en base |
-| CU-ORG-01 | Listar hospitales visibles | Operador | GET /hospitales | P0 | AC | IAM: ScopeGuard; DatabaseModule. | PENDIENTE; no implementado en base |
-| CU-ORG-02 | Crear hospital | Administrador | POST /hospitales | P1 | PROP | IAM: ScopeGuard; DatabaseModule. | PENDIENTE; no implementado en base |
-| CU-ORG-03 | Editar configuración hospital, huso y estado | Administrador | PATCH /hospitales/{hospitalId} | P0 | AC | IAM: ScopeGuard; DatabaseModule. | PENDIENTE; no implementado en base |
-| CU-ORG-04 | Consultar divisiones por hospital | Operador | GET /hospitales/{hospitalId}/divisiones | P0 | AC | IAM: ScopeGuard; DatabaseModule. | PENDIENTE; no implementado en base |
-| CU-ORG-05 | Crear división | Administrador | POST /divisiones | P0 | AC | IAM: ScopeGuard; DatabaseModule. | PENDIENTE; no implementado en base |
-| CU-ORG-06 | Actualizar división | Administrador | PATCH /divisiones/{divisionId} | P0 | AC | IAM: ScopeGuard; DatabaseModule. | PENDIENTE; no implementado en base |
-| CU-ORG-07 | Listar servicios y jerarquía | Operador | GET /servicios | P0 | AC | IAM: ScopeGuard; DatabaseModule. | PENDIENTE; no implementado en base |
-| CU-ORG-08 | Crear servicio bajo división | Administrador | POST /servicios | P0 | AC | IAM: ScopeGuard; DatabaseModule. | PENDIENTE; no implementado en base |
-| CU-ORG-09 | Modificar servicio o desactivarlo | Administrador | PATCH /servicios/{servicioId} | P0 | AC | IAM: ScopeGuard; DatabaseModule. | PENDIENTE; no implementado en base |
-| CU-ORG-10 | Listar subáreas por servicio | Operador | GET /servicios/{servicioId}/subareas | P0 | AC | IAM: ScopeGuard; DatabaseModule. | PENDIENTE; no implementado en base |
-| CU-ORG-11 | Crear subárea | Administrador | POST /subareas | P1 | AC | IAM: ScopeGuard; DatabaseModule. | PENDIENTE; no implementado en base |
-| CU-ORG-12 | Modificar subárea o desactivarla | Administrador | PATCH /subareas/{subareaId} | P1 | AC | IAM: ScopeGuard; DatabaseModule. | PENDIENTE; no implementado en base |
-| CU-ORG-13 | Consultar árbol de organización para filtros | Operador | GET /organizacion/arbol | P0 | PROP | IAM: ScopeGuard; DatabaseModule. | PENDIENTE; no implementado en base |
+| CU-IAM-01 | Iniciar sesión y emitir tokens | Operador | POST /auth/login | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | BLOQUEADO_HTTP; clasificación exacta en ALCANCE_B1.md |
+| CU-IAM-02 | Renovar token | Operador | POST /auth/refresh | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | BLOQUEADO_HTTP; clasificación exacta en ALCANCE_B1.md |
+| CU-IAM-03 | Cerrar sesión y revocar sesión | Operador | POST /auth/logout | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | BLOQUEADO_HTTP; clasificación exacta en ALCANCE_B1.md |
+| CU-IAM-04 | Consultar perfil y alcances propios | Operador | GET /auth/me | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | BLOQUEADO_HTTP; clasificación exacta en ALCANCE_B1.md |
+| CU-IAM-05 | Listar sesiones activas del usuario | Operador | GET /auth/sessions | P1 | PROP | DatabaseModule, PolicyEngine y catálogo de ámbitos. | BLOQUEADO_HTTP; clasificación exacta en ALCANCE_B1.md |
+| CU-IAM-06 | Revocar sesión en otro dispositivo | Operador | DELETE /auth/sessions/{sessionId} | P1 | PROP | DatabaseModule, PolicyEngine y catálogo de ámbitos. | BLOQUEADO_HTTP; clasificación exacta en ALCANCE_B1.md |
+| CU-IAM-07 | Dar de alta cuenta de acceso | Administrador | POST /usuarios | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | BLOQUEADO_HTTP; clasificación exacta en ALCANCE_B1.md |
+| CU-IAM-08 | Consultar y filtrar cuentas | Administrador | GET /usuarios | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | BLOQUEADO_HTTP; clasificación exacta en ALCANCE_B1.md |
+| CU-IAM-09 | Modificar o bloquear cuenta | Administrador | PATCH /usuarios/{usuarioId} | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | BLOQUEADO_HTTP; clasificación exacta en ALCANCE_B1.md |
+| CU-IAM-10 | Listar roles y permisos | Administrador | GET /roles | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | BLOQUEADO_HTTP; clasificación exacta en ALCANCE_B1.md |
+| CU-IAM-11 | Asignar rol y alcance temporal | Administrador | POST /usuarios/{usuarioId}/roles | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | BLOQUEADO_HTTP; clasificación exacta en ALCANCE_B1.md |
+| CU-IAM-12 | Revocar asignación de rol | Administrador | DELETE /usuarios/{usuarioId}/roles/{usuarioRolId} | P0 | AC | DatabaseModule, PolicyEngine y catálogo de ámbitos. | BLOQUEADO_HTTP; clasificación exacta en ALCANCE_B1.md |
+| CU-IAM-13 | Consultar permisos efectivos de usuario | Administrador | GET /usuarios/{usuarioId}/permisos-efectivos | P0 | PROP | DatabaseModule, PolicyEngine y catálogo de ámbitos. | PREPARADO_PARCIAL_NO_PUBLICADO B1; política/repositorio de asignaciones |
+| CU-IAM-14 | Consultar matriz de autorizaciones vigente | Autoridad | GET /politicas-autorizacion | P0 | PROP | DatabaseModule, PolicyEngine y catálogo de ámbitos. | BLOQUEADO_HTTP; clasificación exacta en ALCANCE_B1.md |
+| CU-IAM-15 | Aprobar/revisar cambio de matriz de autorización | Jefatura | POST /politicas-autorizacion/versiones | P1 | PROP | DatabaseModule, PolicyEngine y catálogo de ámbitos. | BLOQUEADO_HTTP; clasificación exacta en ALCANCE_B1.md |
+| CU-IAM-16 | Consultar auditoría de accesos denegados | Auditor | GET /auditorias/accesos | P1 | PROP | DatabaseModule, PolicyEngine y catálogo de ámbitos. | BLOQUEADO_HTTP; clasificación exacta en ALCANCE_B1.md |
+| CU-ORG-01 | Listar hospitales visibles | Operador | GET /hospitales | P0 | AC | IAM: ScopeGuard; DatabaseModule. | PREPARADO_NO_PUBLICADO B1; SQL/policy/DTO; QA/identidad pendientes |
+| CU-ORG-02 | Crear hospital | Administrador | POST /hospitales | P1 | PROP | IAM: ScopeGuard; DatabaseModule. | BLOQUEADO/PENDIENTE; clasificación exacta en ALCANCE_B1.md |
+| CU-ORG-03 | Editar configuración hospital, huso y estado | Administrador | PATCH /hospitales/{hospitalId} | P0 | AC | IAM: ScopeGuard; DatabaseModule. | BLOQUEADO/PENDIENTE; clasificación exacta en ALCANCE_B1.md |
+| CU-ORG-04 | Consultar divisiones por hospital | Operador | GET /hospitales/{hospitalId}/divisiones | P0 | AC | IAM: ScopeGuard; DatabaseModule. | PREPARADO_NO_PUBLICADO B1; SQL/policy/DTO; QA/identidad pendientes |
+| CU-ORG-05 | Crear división | Administrador | POST /divisiones | P0 | AC | IAM: ScopeGuard; DatabaseModule. | BLOQUEADO/PENDIENTE; clasificación exacta en ALCANCE_B1.md |
+| CU-ORG-06 | Actualizar división | Administrador | PATCH /divisiones/{divisionId} | P0 | AC | IAM: ScopeGuard; DatabaseModule. | BLOQUEADO/PENDIENTE; clasificación exacta en ALCANCE_B1.md |
+| CU-ORG-07 | Listar servicios y jerarquía | Operador | GET /servicios | P0 | AC | IAM: ScopeGuard; DatabaseModule. | PREPARADO_NO_PUBLICADO B1; SQL/policy/DTO; QA/identidad pendientes |
+| CU-ORG-08 | Crear servicio bajo división | Administrador | POST /servicios | P0 | AC | IAM: ScopeGuard; DatabaseModule. | BLOQUEADO/PENDIENTE; clasificación exacta en ALCANCE_B1.md |
+| CU-ORG-09 | Modificar servicio o desactivarlo | Administrador | PATCH /servicios/{servicioId} | P0 | AC | IAM: ScopeGuard; DatabaseModule. | BLOQUEADO/PENDIENTE; clasificación exacta en ALCANCE_B1.md |
+| CU-ORG-10 | Listar subáreas por servicio | Operador | GET /servicios/{servicioId}/subareas | P0 | AC | IAM: ScopeGuard; DatabaseModule. | PREPARADO_NO_PUBLICADO B1; SQL/policy/DTO; QA/identidad pendientes |
+| CU-ORG-11 | Crear subárea | Administrador | POST /subareas | P1 | AC | IAM: ScopeGuard; DatabaseModule. | BLOQUEADO/PENDIENTE; clasificación exacta en ALCANCE_B1.md |
+| CU-ORG-12 | Modificar subárea o desactivarla | Administrador | PATCH /subareas/{subareaId} | P1 | AC | IAM: ScopeGuard; DatabaseModule. | BLOQUEADO/PENDIENTE; clasificación exacta en ALCANCE_B1.md |
+| CU-ORG-13 | Consultar árbol de organización para filtros | Operador | GET /organizacion/arbol | P0 | PROP | IAM: ScopeGuard; DatabaseModule. | BLOQUEADO/PENDIENTE; clasificación exacta en ALCANCE_B1.md |
 | CU-PER-01 | Alta de empleado con RUD único | RRHH | POST /empleados | P0 | AC | IAM, ORG. | PENDIENTE; no implementado en base |
 | CU-PER-02 | Buscar y paginar padrón por RUD, categoría, estado | RRHH | GET /empleados | P0 | AC | IAM, ORG. | PENDIENTE; no implementado en base |
 | CU-PER-03 | Consultar expediente laboral | RRHH | GET /empleados/{empleadoId} | P0 | AC | IAM, ORG. | PENDIENTE; no implementado en base |

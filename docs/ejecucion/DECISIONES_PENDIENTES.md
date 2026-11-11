@@ -21,3 +21,16 @@ Corte: 2026-11-11. Responsable técnico de seguimiento: Codex; decisiones instit
 | DEC-E15 | Matriz REQ/ENT/ACE/VER accesible, no conciliada exhaustivamente con 271 CU | Revisar trazas por lote; no inventar aprobaciones ni mapeo uno a uno | DoR de cada lote |
 
 Consultas de identidad y QA presentadas a la persona usuaria; sin respuesta no se consideran autorizadas. La instrucción actual permite avanzar en OPS-03 sin BD, sin relajar los bloqueos del negocio.
+
+## Decisiones específicas de B1
+
+| ID | Decisión necesaria | Propuesta concreta | Gate |
+|---|---|---|---|
+| DEC-B1-01 | Confirmar proveedor disponible/autorizado o elegir identidad local | ADR-B1-identidad-autorizacion.md compara ambas; búsquedas OIDC/SSO/Keycloak sin evidencia de integración autorizada | Login/refresh/logout/me |
+| DEC-B1-02 | Autorizar cluster QA, baseline saneada, credenciales externas y rol lectura | infra/qa/compose.qa.yaml y propuesta-rol-qa-lectura.sql, puerto 127.0.0.1:55432; nada ejecutado | Integración PG |
+| DEC-B1-03 | Ratificar facultad para leer catálogos organizativos | Restricción conservadora al permiso V1 CATALOGOS_ADMINISTRAR; no siembra grants ni crea códigos | Exposición ORG |
+| DEC-B1-04 | Elegir/aprobar únicamente propuestas V2 necesarias | Sesiones si API emite tokens; credenciales locales u OIDC como alternativas, no paquete automático | SQL/identidad |
+| DEC-B1-05 | Revisar clientes externos del PostgreSQL compartido | Patch localhost preparado; no se puede asegurar compatibilidad LAN sin inventario del propietario | Cambio de bind/reinicio |
+| DEC-B1-06 | Aprobar fixtures sintéticos QA y procedencia del baseline | fixtures-org.propuesta.sql sin empleados/credenciales; no aplicar a base institucional | Pruebas SQL de aislamiento |
+
+No se solicita ni presupone aplicar estas propuestas durante B1. El proveedor runtime rechaza toda identidad; no hay rutas nuevas de negocio.

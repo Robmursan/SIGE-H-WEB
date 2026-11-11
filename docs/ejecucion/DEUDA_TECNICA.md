@@ -17,3 +17,16 @@ Responsable técnico: Codex. Corte 2026-11-11. Política de severidad: la direcc
 | DT-11 | BAJA | Worktree de desarrollo vive en /tmp y depende de node_modules preinstalado reutilizado | Commits quedan en Git común; usar npm ci con permisos de red al preparar entorno reproducible; no depender de /tmp para respaldos | DOCUMENTADO |
 
 El orquestador/Antigravity permanecen suspendidos; sus hallazgos no se declaran resueltos ni son prerrequisito para desarrollar producto con Codex.
+
+## Revisión focalizada B1
+
+| ID | Severidad / estado | Evidencia y tratamiento |
+|---|---|---|
+| DT-B1-01 | ALTA / BLOQUEA_PUBLICACION | Adaptadores SQL y autorización preparados, sin ejecución PG real; no marcar CU implementados ni exponer controllers. Resolver con QA aprobada. |
+| DT-B1-02 | ALTA / BLOQUEA_IAM | Sin proveedor/sesiones reales. Token revocado, refresh replay, logout y concurrencia de sesión son pruebas faltantes, no simuladas. |
+| DT-B1-03 | MEDIA / DECISION | Lectura restringida a CATALOGOS_ADMINISTRAR hasta ratificar matriz institucional; no impide preparación interna. |
+| DT-B1-04 | MEDIA / PROPUESTA | La etiqueta postgres:17-alpine de QA no está fijada por digest. Fijar digest verificado al autorizar/provisionar QA; sin iniciar imagen en esta entrega. |
+| DT-B1-05 | MEDIA / PENDIENTE_QA | Preflight y contrato SQL cuentan 51 tablas físicas por pg_class, no por tablas visibles a un rol con SELECT solo en nueve. Su ejecución todavía pendiente. Tras V2 revisar baseline/umbral explícitamente. |
+| DT-B1-06 | MEDIA / ALCANCE | Paginación UUID estable dentro de cada statement; sin snapshot entre páginas bajo cambios concurrentes. Versionado de snapshots si un CU futuro lo requiere. |
+
+DT-11 de B0 mitigada: worktree/commits de B1 persistentes bajo Documents; el enlace local de node_modules reutiliza dependencias instaladas, no se incluye en commit. El futuro preflight de integración aborda DT-10, pero no se declara validado contra PostgreSQL. Las propuestas V2 no garantizan por sí solas revocación, límites de vida ni refresh seguro sin use cases/transacciones/pruebas correspondientes.
