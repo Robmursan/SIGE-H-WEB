@@ -7,6 +7,16 @@ import {
   type QueryResultRow,
 } from 'pg';
 
+function safeTransactionErrorCode(error: unknown): string {
+  const code =
+    typeof error === 'object' && error !== null && 'code' in error
+      ? error.code
+      : undefined;
+  return typeof code === 'string' && /^[A-Z0-9]{2,12}$/.test(code)
+    ? code
+    : 'UNKNOWN';
+}
+
 export const PG_POOL = Symbol('PG_POOL');
 
 export interface DatabasePingResult {
@@ -105,6 +115,7 @@ export class PostgresService implements OnModuleDestroy {
    */
   async withTransaction<T>(
     work: (client: PoolClient) => Promise<T>,
+    options?: { readOnly: boolean },
   ): Promise<T> {
     const client = await this.pool.connect();
     let txStarted = false;
@@ -113,7 +124,13 @@ export class PostgresService implements OnModuleDestroy {
     let discardClient = false;
 
     try {
-      const beginResult = await client.query('BEGIN');
+      const beginResult = await client.query(
+        options?.readOnly === false
+          ? 'BEGIN READ WRITE'
+          : options?.readOnly === true
+            ? 'BEGIN READ ONLY'
+            : 'BEGIN',
+      );
       if (!beginResult || beginResult.command !== 'BEGIN') {
         discardClient = true;
         throw new Error(
@@ -145,7 +162,7 @@ export class PostgresService implements OnModuleDestroy {
       if (commitInFlight) {
         discardClient = true;
         this.logger.warn(
-          `[COMMIT_OUTCOME_UNCERTAIN] Fallo durante COMMIT transaccional; resultado incierto en PostgreSQL, cliente descartado del pool y sin reintento automático sin idempotencia/reconciliación: ${sanitizeDbErrorMessage(error)}`,
+          `[COMMIT_OUTCOME_UNCERTAIN] Fallo durante COMMIT transaccional; resultado incierto en PostgreSQL, cliente descartado del pool y sin reintento automático sin idempotencia/reconciliación: ${safeTransactionErrorCode(error)}`,
         );
       } else if (!txStarted) {
         discardClient = true;
@@ -158,7 +175,7 @@ export class PostgresService implements OnModuleDestroy {
         } catch (rollbackError) {
           discardClient = true;
           this.logger.error(
-            `Error al ejecutar ROLLBACK transaccional; cliente descartado del pool: ${sanitizeDbErrorMessage(rollbackError)}`,
+            `Error al ejecutar ROLLBACK transaccional; cliente descartado del pool: ${safeTransactionErrorCode(rollbackError)}`,
           );
         }
       }

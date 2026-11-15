@@ -1,10 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import type { Pool, PoolClient } from 'pg';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  PostgresService,
-  sanitizeDbErrorMessage,
-} from './postgres.service.js';
+import { PostgresService, sanitizeDbErrorMessage } from './postgres.service.js';
 
 describe('PostgresService', () => {
   let service: PostgresService;
@@ -214,5 +211,27 @@ describe('PostgresService', () => {
   it('cierra el pool limpiamente en onModuleDestroy()', async () => {
     await service.onModuleDestroy();
     expect(mockPool.end).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Modos transaccionales explícitos sin DB real', () => {
+  it.each([
+    [false, 'BEGIN READ WRITE'],
+    [true, 'BEGIN READ ONLY'],
+  ] as const)('readOnly=%s usa %s', async (readOnly, begin) => {
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce({ command: 'BEGIN' })
+      .mockResolvedValueOnce({ command: 'COMMIT' });
+    const client = { query, release: vi.fn() };
+    const pool = { connect: vi.fn(async () => client) } as unknown as Pool;
+    const service = new PostgresService(pool, {
+      get: () => 'sigeh',
+    } as unknown as ConfigService);
+    expect(await service.withTransaction(async () => 'ok', { readOnly })).toBe(
+      'ok',
+    );
+    expect(query.mock.calls.map((c) => c[0])).toEqual([begin, 'COMMIT']);
+    expect(client.release).toHaveBeenCalledWith();
   });
 });

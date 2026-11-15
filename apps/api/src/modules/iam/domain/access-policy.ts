@@ -5,6 +5,10 @@ export interface OrganizationScope {
 }
 
 export interface PersistedAssignment {
+  kind: 'TITULAR' | 'ENCARGADO' | null;
+  mandateFrom: Date | null;
+  mandateUntil: Date | null;
+  encargoPermissions: string[];
   usuarioActivo: boolean;
   hospitalActivo: boolean;
   scope: OrganizationScope;
@@ -42,6 +46,23 @@ export function assignmentAllows(
     start > now ||
     (end !== undefined && end <= now) ||
     !grant.permissions.includes(permission)
+  )
+    return false;
+
+  const mandateStart = grant.mandateFrom?.getTime();
+  const mandateEnd = grant.mandateUntil?.getTime();
+  if (
+    !['TITULAR', 'ENCARGADO'].includes(grant.kind ?? '') ||
+    mandateStart === undefined ||
+    !Number.isFinite(mandateStart) ||
+    mandateStart > now ||
+    (mandateEnd !== undefined &&
+      (!Number.isFinite(mandateEnd) ||
+        mandateEnd <= mandateStart ||
+        mandateEnd <= now)) ||
+    (grant.kind === 'ENCARGADO' &&
+      (mandateEnd === undefined ||
+        !grant.encargoPermissions.includes(permission)))
   )
     return false;
 

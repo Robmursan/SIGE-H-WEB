@@ -33,8 +33,9 @@ export class AppService implements OnApplicationBootstrap {
       if (nodeEnv !== 'production') {
         const result = await this.postgresService.query<{ total: number }>(
           `SELECT count(*)::int AS total
-           FROM information_schema.tables
-           WHERE table_schema = $1 AND table_type = 'BASE TABLE'`,
+           FROM pg_catalog.pg_class c
+           JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+           WHERE n.nspname = $1 AND c.relkind IN ('r', 'p')`,
           [schema],
         );
         const total = result.rows[0]?.total ?? 0;

@@ -35,7 +35,6 @@ describe('B1 — exposición HTTP bloqueada por defecto', () => {
     '/api/v1/servicios',
     '/api/v1/servicios/33333333-3333-4333-8333-333333333333/subareas',
     '/api/v1/organizacion/arbol',
-    '/api/v1/auth/me',
     '/api/v1/roles',
   ])('GET %s no está publicado', async (path) => {
     await request(app.getHttpServer()).get(path).expect(404);
@@ -48,20 +47,26 @@ describe('B1 — exposición HTTP bloqueada por defecto', () => {
     '/api/v1/auth/login',
     '/api/v1/auth/refresh',
     '/api/v1/auth/logout',
-  ])('POST %s no está publicado', async (path) => {
-    await request(app.getHttpServer()).post(path).send({}).expect(404);
+  ])('POST %s deshabilitado antes de SQL', async (path) => {
+    await request(app.getHttpServer()).post(path).send({}).expect(503);
   });
   it('el grafo Nest registra casos internos, pero niega identidad sin consultar PostgreSQL', async () => {
     await expect(
       app.get(OrganizationQueries).list(undefined, 'hospitales', {}),
     ).rejects.toThrow('IDENTIDAD_NO_DISPONIBLE');
   });
-  it('Swagger sigue describiendo exclusivamente las cinco rutas reales de B0', async () => {
+  it('Swagger incluye rutas reales IAM deshabilitadas por defecto', async () => {
     const { body } = await request(app.getHttpServer())
       .get('/docs/openapi.json')
       .expect(200);
     expect(Object.keys(body.paths).sort()).toEqual([
       '/api/v1',
+      '/api/v1/auth/login',
+      '/api/v1/auth/logout',
+      '/api/v1/auth/me',
+      '/api/v1/auth/refresh',
+      '/api/v1/auth/sessions',
+      '/api/v1/auth/sessions/{sessionId}',
       '/api/v1/health',
       '/api/v1/health/live',
       '/api/v1/health/ready',

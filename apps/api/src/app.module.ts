@@ -18,7 +18,8 @@ import { OperacionesModule } from './modules/operaciones/operaciones.module.js';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      // Explicit process configuration only; never import a legacy admin .env.
+      ignoreEnvFile: true,
       validate: validateEnv,
     }),
     DatabaseModule,

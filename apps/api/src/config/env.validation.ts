@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { assertQaTarget, QA_PASSWORD_FILE } from '../database/qa-connection.js';
 import { plainToInstance, Type } from 'class-transformer';
 import {
   IsIn,
@@ -131,7 +132,7 @@ export class EnvironmentVariables {
   @IsInt()
   @Min(1)
   @Max(65535)
-  DB_PORT: number = 5432;
+  DB_PORT: number = 55432;
 
   @IsString()
   @IsNotEmpty()
@@ -139,7 +140,7 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsNotEmpty()
-  DB_PASSWORD!: string;
+  DB_PASSWORD_FILE: string = QA_PASSWORD_FILE;
 
   @IsString()
   @IsNotEmpty()
@@ -238,6 +239,9 @@ export class EnvironmentVariables {
 export function validateEnv(
   config: Record<string, unknown>,
 ): EnvironmentVariables {
+  if (config.DB_PASSWORD || config.DATABASE_URL) {
+    throw new Error('QA_CREDENTIAL_SOURCE_REJECTED: use DB_PASSWORD_FILE');
+  }
   const rawJwtExpiration = config.JWT_EXPIRATION ?? '8h';
   const parsedJwtExpirationSeconds =
     parseJwtExpirationSeconds(rawJwtExpiration);
@@ -246,9 +250,9 @@ export function validateEnv(
     NODE_ENV: config.NODE_ENV ?? 'development',
     PORT: config.PORT ?? 3000,
     DB_HOST: config.DB_HOST ?? '127.0.0.1',
-    DB_PORT: config.DB_PORT ?? 5432,
+    DB_PORT: config.DB_PORT ?? 55432,
     DB_USER: config.DB_USER,
-    DB_PASSWORD: config.DB_PASSWORD,
+    DB_PASSWORD_FILE: config.DB_PASSWORD_FILE ?? QA_PASSWORD_FILE,
     DB_NAME: config.DB_NAME,
     DB_SCHEMA: config.DB_SCHEMA ?? 'sigeh',
     DATABASE_URL: config.DATABASE_URL,
@@ -303,5 +307,12 @@ export function validateEnv(
     );
   }
 
+  assertQaTarget({
+    DB_HOST: validatedConfig.DB_HOST,
+    DB_PORT: validatedConfig.DB_PORT,
+    DB_NAME: validatedConfig.DB_NAME,
+    DB_USER: validatedConfig.DB_USER,
+    DB_SCHEMA: validatedConfig.DB_SCHEMA,
+  });
   return validatedConfig;
 }

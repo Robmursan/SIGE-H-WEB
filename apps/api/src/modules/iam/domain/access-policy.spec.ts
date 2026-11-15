@@ -11,6 +11,10 @@ const service = '33333333-3333-4333-8333-333333333333';
 const other = '99999999-9999-4999-8999-999999999999';
 function grant(): PersistedAssignment {
   return {
+    kind: 'TITULAR',
+    mandateFrom: new Date('2026-01-01'),
+    mandateUntil: null,
+    encargoPermissions: [],
     usuarioActivo: true,
     hospitalActivo: true,
     scope: { hospitalId: hospital, divisionId: division, servicioId: service },
@@ -138,4 +142,45 @@ describe('Política V1 de ámbitos persistidos (sin autenticación simulada)', (
     );
     expect(assignmentAllows(g, { divisionId: other }, permission)).toBe(false);
   });
+});
+
+describe('Mandatos V2: nunca inferir facultades de encargado', () => {
+  it('sin contexto se deniega, incluso con permiso V1 y jerarquía válida', () => {
+    const g = grant();
+    g.kind = null;
+    expect(assignmentAllows(g, { hospitalId: hospital }, permission)).toBe(
+      false,
+    );
+  });
+  it('encargado exige fin de mandato y permiso explícito adicional', () => {
+    const g = grant();
+    g.kind = 'ENCARGADO';
+    expect(assignmentAllows(g, { hospitalId: hospital }, permission)).toBe(
+      false,
+    );
+    g.mandateUntil = new Date('2026-12-01');
+    expect(assignmentAllows(g, { hospitalId: hospital }, permission)).toBe(
+      false,
+    );
+    g.encargoPermissions = [permission];
+    expect(assignmentAllows(g, { hospitalId: hospital }, permission)).toBe(
+      true,
+    );
+    g.permissions = [];
+    expect(assignmentAllows(g, { hospitalId: hospital }, permission)).toBe(
+      false,
+    );
+  });
+  it.each(['not-started', 'expired', 'invalid'])(
+    'rechaza mandato %s',
+    (reason) => {
+      const g = grant();
+      if (reason === 'not-started') g.mandateFrom = new Date('2027-01-01');
+      if (reason === 'expired') g.mandateUntil = g.observedAt;
+      if (reason === 'invalid') g.mandateFrom = new Date('invalid');
+      expect(assignmentAllows(g, { hospitalId: hospital }, permission)).toBe(
+        false,
+      );
+    },
+  );
 });

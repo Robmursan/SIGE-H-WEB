@@ -14,11 +14,15 @@ describe('CU-OPS-03 — contrato HTTP sin PostgreSQL', () => {
     throw new Error('Estas pruebas HTTP no permiten acceso a PostgreSQL');
   });
 
-  async function start(swaggerEnabled = 'true', nodeEnv = 'test') {
+  async function start(
+    swaggerEnabled = 'true',
+    nodeEnv = 'test',
+    query: (...args: unknown[]) => unknown = forbiddenDatabaseUse,
+  ) {
     const fixture = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PG_POOL)
       .useValue({
-        query: forbiddenDatabaseUse,
+        query,
         connect: forbiddenDatabaseUse,
         end: vi.fn(),
       })
@@ -42,6 +46,22 @@ describe('CU-OPS-03 — contrato HTTP sin PostgreSQL', () => {
     app = undefined;
     expect(forbiddenDatabaseUse).not.toHaveBeenCalled();
     forbiddenDatabaseUse.mockClear();
+  });
+
+  it('preserva health/readiness con solo SELECT y sin permisos IAM', async () => {
+    const query = vi.fn(async () => ({
+      rows: [{ ok: 1, schema_exists: true }],
+      rowCount: 1,
+    }));
+    const server = await start('true', 'test', query);
+    for (const path of ['/api/v1/health', '/api/v1/health/ready']) {
+      const r = await request(server).get(path).expect(200);
+      expect(r.body).toMatchObject({
+        status: 'ok',
+        database: { status: 'up', schema: 'sigeh', schemaVerified: true },
+      });
+    }
+    expect(query.mock.calls).toHaveLength(2);
   });
 
   it('sirve versión y liveness reales sin sesión, sin secretos y sin consultar BD', async () => {
@@ -73,6 +93,12 @@ describe('CU-OPS-03 — contrato HTTP sin PostgreSQL', () => {
     expect(document.info.version).toBe(response.body.apiVersion);
     expect(Object.keys(document.paths).sort()).toEqual([
       '/api/v1',
+      '/api/v1/auth/login',
+      '/api/v1/auth/logout',
+      '/api/v1/auth/me',
+      '/api/v1/auth/refresh',
+      '/api/v1/auth/sessions',
+      '/api/v1/auth/sessions/{sessionId}',
       '/api/v1/health',
       '/api/v1/health/live',
       '/api/v1/health/ready',

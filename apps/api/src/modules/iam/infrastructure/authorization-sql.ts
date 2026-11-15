@@ -6,6 +6,7 @@ export const AUTHORIZED_SCOPES_CTE = `WITH authorized_scopes AS (
     ur.servicio_id
   FROM sigeh.usuarios u
   JOIN sigeh.usuario_roles ur ON ur.usuario_id = u.usuario_id
+  JOIN sigeh.usuario_roles_contexto ctx ON ctx.usuario_rol_id=ur.usuario_rol_id
   JOIN sigeh.roles r ON r.rol_id = ur.rol_id
   JOIN sigeh.rol_permisos rp ON rp.rol_id = r.rol_id
   JOIN sigeh.permisos p ON p.permiso_id = rp.permiso_id
@@ -14,7 +15,11 @@ export const AUTHORIZED_SCOPES_CTE = `WITH authorized_scopes AS (
     AND s.hospital_id = ur.hospital_id AND s.activo
   LEFT JOIN sigeh.divisiones d ON d.division_id = COALESCE(ur.division_id, s.division_id)
     AND d.hospital_id = ur.hospital_id AND d.activo
-  WHERE u.usuario_id = $1::uuid AND u.activo AND p.codigo = $2
+  WHERE ctx.mandato_desde <= CURRENT_TIMESTAMP
+    AND (ctx.mandato_hasta IS NULL OR ctx.mandato_hasta > CURRENT_TIMESTAMP)
+    AND (ctx.tipo='TITULAR' OR (ctx.tipo='ENCARGADO' AND ctx.mandato_hasta IS NOT NULL
+      AND EXISTS(SELECT 1 FROM sigeh.encargo_permisos ep WHERE ep.usuario_rol_id=ur.usuario_rol_id AND ep.permiso_id=p.permiso_id)))
+    AND u.usuario_id = $1::uuid AND u.activo AND p.codigo = $2
     AND ur.vigente_desde <= CURRENT_TIMESTAMP
     AND (ur.vigente_hasta IS NULL OR ur.vigente_hasta > CURRENT_TIMESTAMP)
     AND (ur.servicio_id IS NULL OR s.servicio_id IS NOT NULL)

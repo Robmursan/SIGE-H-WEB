@@ -1,0 +1,15 @@
+-- NO EJECUTADO. PLANTILLA COMENTADA: no es una remediación aprobada.
+-- Detenerse: resolver HBA/search_path y levantar inventario de consumidores primero.
+-- Cada REVOKE afecta a TODOS los usuarios del cluster QA; capturar ACL antes/después.
+-- Solo tras nueva autorización y revisión de dependencias, en transacción en sigeh_qa:
+-- REVOKE TEMPORARY, CREATE ON DATABASE sigeh_qa FROM PUBLIC;
+-- REVOKE CONNECT ON DATABASE postgres FROM PUBLIC;
+-- REVOKE CONNECT ON DATABASE template0 FROM PUBLIC;
+-- REVOKE CONNECT ON DATABASE template1 FROM PUBLIC;
+-- REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+-- REVOKE CREATE ON SCHEMA sigeh FROM PUBLIC;
+-- No revocar CONNECT QA de PUBLIC automáticamente: CONNECT app se concede explícitamente,
+-- pero el impacto a otros consumidores requiere decisión. No tocar cluster institucional.
+-- No revocar EXECUTE de extensiones en public indiscriminadamente: inventariar funciones,
+-- consumidores, SECURITY DEFINER y opciones; evaluar grants específicos en nueva revisión.
+-- No ALTER DEFAULT PRIVILEGES: no hay objetos futuros autorizados que lo requieran.

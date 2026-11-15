@@ -9,10 +9,10 @@ import {
 describe('validateEnv', () => {
   const validBaseEnv = {
     DB_HOST: '127.0.0.1',
-    DB_PORT: '5432',
-    DB_USER: 'sigeh_admin',
-    DB_PASSWORD: 'test_password_local_only',
-    DB_NAME: 'sigeh_db',
+    DB_PORT: '55432',
+    DB_USER: 'sigeh_qa_app',
+    DB_PASSWORD_FILE: '/external/private/qa-password',
+    DB_NAME: 'sigeh_qa',
     DB_SCHEMA: 'sigeh',
     JWT_SECRET: 'a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6',
     JWT_EXPIRATION: '8h',
@@ -24,9 +24,9 @@ describe('validateEnv', () => {
     expect(result.NODE_ENV).toBe('development');
     expect(result.PORT).toBe(3000);
     expect(result.DB_HOST).toBe('127.0.0.1');
-    expect(result.DB_PORT).toBe(5432);
-    expect(result.DB_USER).toBe('sigeh_admin');
-    expect(result.DB_NAME).toBe('sigeh_db');
+    expect(result.DB_PORT).toBe(55432);
+    expect(result.DB_USER).toBe('sigeh_qa_app');
+    expect(result.DB_NAME).toBe('sigeh_qa');
     expect(result.DB_SCHEMA).toBe('sigeh');
     expect(result.DB_POOL_MAX).toBe(10);
     expect(result.DB_STATEMENT_TIMEOUT_MS).toBe(15000);
@@ -123,9 +123,9 @@ describe('validateEnv', () => {
     expect(() =>
       validateEnv({
         DB_HOST: '127.0.0.1',
-        DB_PORT: '5432',
+        DB_PORT: '55432',
       }),
-    ).toThrow(/DB_USER.*DB_PASSWORD.*DB_NAME.*JWT_SECRET/);
+    ).toThrow(/DB_USER.*DB_NAME.*JWT_SECRET/);
   });
 
   it('lanza error cuando JWT_SECRET tiene menos de 32 caracteres', () => {
