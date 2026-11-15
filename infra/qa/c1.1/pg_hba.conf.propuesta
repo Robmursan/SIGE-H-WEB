@@ -1,0 +1,23 @@
+# C1.1 PROPUESTA NO APLICADA. NO copiar sin render/revision/autorizacion.
+# IPv4 bridge/puerto publicado: falta confirmar IP origen vista por PostgreSQL.
+# Socket administrativo: SCRAM, sin acceso app por socket.
+local sigeh_qa sigeh_qa_bootstrap scram-sha-256
+local replication all reject
+local all all reject
+# Loopback DENTRO del contenedor; no equivale a 127.0.0.1 del host Docker.
+host sigeh_qa sigeh_qa_bootstrap 127.0.0.1/32 scram-sha-256
+host sigeh_qa sigeh_qa_bootstrap ::1/128 scram-sha-256
+host sigeh_qa sigeh_qa_app 127.0.0.1/32 scram-sha-256
+host sigeh_qa sigeh_qa_app ::1/128 scram-sha-256
+# Insertar aqui, solo tras observar origen y aprobar /32 concreto:
+# host sigeh_qa sigeh_qa_bootstrap ORIGEN_ADMIN_QA/32 scram-sha-256
+# host sigeh_qa sigeh_qa_app ORIGEN_API_HOST/32 scram-sha-256
+# 172.19.0.1/32 es candidato gateway, NO una IP de origen comprobada.
+# API en otro contenedor: regla separada /32 estable; nunca todo 172.19.0.0/16.
+# IPv6 remoto queda denegado hasta inventario y regla /128 propia.
+host replication all 0.0.0.0/0 reject
+host replication all ::0/0 reject
+host all all 0.0.0.0/0 reject
+host all all ::0/0 reject
+# host admite TCP sin TLS. Variante hostssl requiere TLS previo validado y
+# cambio Pool aprobado. Con ssl=off actual NO sustituir host por hostssl.

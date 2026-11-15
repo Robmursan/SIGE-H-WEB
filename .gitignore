@@ -1,0 +1,48 @@
+# Includes dependency symlinks used by isolated local worktrees.
+**/node_modules
+.venv/
+.env
+.env.*
+!.env.example
+*.log
+
+# Generated builds, test output and local caches.
+dist/
+build/
+coverage/
+.nyc_output/
+.cache/
+*.tsbuildinfo
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local credentials and database backups; keep versioned SQL migrations visible.
+.envrc
+.pgpass
+.pg_service.conf
+.netrc
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+backups/
+*.dump
+*.pgdump
+*.backup
+*.sql.gz
+*.sql.bz2
+*.sql.xz
+*.sql.zst
+
+# Editor scratch files, temporary files and unnamed local notes.
+/Untitled
+*.tmp
+*.temp
+*.bak
+*.orig
+*.swp
+*.swo
+*~
+.DS_Store

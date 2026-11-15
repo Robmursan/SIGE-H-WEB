@@ -1,0 +1,30 @@
+-- PROPUESTA DE DATOS SINTÉTICOS QA. NO EJECUTADA. No contiene empleados ni credenciales.
+BEGIN;
+DO $$ BEGIN IF current_database() <> 'sigeh_qa' THEN RAISE EXCEPTION 'Solo QA'; END IF; END $$;
+INSERT INTO sigeh.hospitales(hospital_id,clave,nombre) VALUES ('11111111-1111-4111-8111-111111111111','QA_B1_A','Hospital QA A'),('11111111-1111-4111-8111-111111111112','QA_B1_B','Hospital QA B');
+INSERT INTO sigeh.divisiones(division_id,hospital_id,clave,nombre) VALUES ('22222222-2222-4222-8222-000000000001','11111111-1111-4111-8111-111111111111','QA_DIV_1','División QA 1');
+INSERT INTO sigeh.divisiones(division_id,hospital_id,clave,nombre) VALUES ('22222222-2222-4222-8222-000000000002','11111111-1111-4111-8111-111111111111','QA_DIV_2','División QA 2');
+INSERT INTO sigeh.divisiones(division_id,hospital_id,clave,nombre) VALUES ('22222222-2222-4222-8222-000000000003','11111111-1111-4111-8111-111111111112','QA_DIV_3','División QA 3');
+INSERT INTO sigeh.servicios(servicio_id,hospital_id,division_id,clave,nombre) VALUES ('33333333-3333-4333-8333-000000000001','11111111-1111-4111-8111-111111111111','22222222-2222-4222-8222-000000000001','QA_SVC_1','Servicio QA 1');
+INSERT INTO sigeh.subareas(subarea_id,hospital_id,servicio_id,clave,nombre) VALUES ('44444444-4444-4444-8444-000000000001','11111111-1111-4111-8111-111111111111','33333333-3333-4333-8333-000000000001','QA_SUB_1','Subárea QA 1');
+INSERT INTO sigeh.servicios(servicio_id,hospital_id,division_id,clave,nombre) VALUES ('33333333-3333-4333-8333-000000000002','11111111-1111-4111-8111-111111111111','22222222-2222-4222-8222-000000000002','QA_SVC_2','Servicio QA 2');
+INSERT INTO sigeh.subareas(subarea_id,hospital_id,servicio_id,clave,nombre) VALUES ('44444444-4444-4444-8444-000000000002','11111111-1111-4111-8111-111111111111','33333333-3333-4333-8333-000000000002','QA_SUB_2','Subárea QA 2');
+INSERT INTO sigeh.servicios(servicio_id,hospital_id,division_id,clave,nombre) VALUES ('33333333-3333-4333-8333-000000000003','11111111-1111-4111-8111-111111111112','22222222-2222-4222-8222-000000000003','QA_SVC_3','Servicio QA 3');
+INSERT INTO sigeh.subareas(subarea_id,hospital_id,servicio_id,clave,nombre) VALUES ('44444444-4444-4444-8444-000000000003','11111111-1111-4111-8111-111111111112','33333333-3333-4333-8333-000000000003','QA_SUB_3','Subárea QA 3');
+INSERT INTO sigeh.roles(rol_id,codigo,nombre) VALUES ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','QA_ORG_B1','Rol sintético QA B1');
+INSERT INTO sigeh.rol_permisos(rol_id,permiso_id) SELECT 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',permiso_id FROM sigeh.permisos WHERE codigo='CATALOGOS_ADMINISTRAR';
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM sigeh.permisos WHERE codigo='CATALOGOS_ADMINISTRAR') OR EXISTS (SELECT 1 FROM sigeh.rol_permisos rp JOIN sigeh.roles r USING(rol_id) JOIN sigeh.permisos p USING(permiso_id) WHERE r.codigo='ADMIN_SISTEMA' AND p.codigo='CATALOGOS_ADMINISTRAR') THEN RAISE EXCEPTION 'Baseline/fixture no válido; no modificar grants existentes'; END IF; END $$;
+INSERT INTO sigeh.usuarios(usuario_id,identificador,activo) VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-000000000001','qa-b1-service-a',true);
+INSERT INTO sigeh.usuario_roles(usuario_id,rol_id,hospital_id,servicio_id,vigente_desde,vigente_hasta) VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-000000000001','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','11111111-1111-4111-8111-111111111111','33333333-3333-4333-8333-000000000001','2000-01-01','2100-01-01');
+INSERT INTO sigeh.usuarios(usuario_id,identificador,activo) VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-000000000002','qa-b1-hospital-b',true);
+INSERT INTO sigeh.usuario_roles(usuario_id,rol_id,hospital_id,servicio_id,vigente_desde,vigente_hasta) VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-000000000002','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','11111111-1111-4111-8111-111111111112',NULL,'2000-01-01','2100-01-01');
+INSERT INTO sigeh.usuarios(usuario_id,identificador,activo) VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-000000000003','qa-b1-expired',true);
+INSERT INTO sigeh.usuario_roles(usuario_id,rol_id,hospital_id,servicio_id,vigente_desde,vigente_hasta) VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-000000000003','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','11111111-1111-4111-8111-111111111111',NULL,'2000-01-01','2001-01-01');
+INSERT INTO sigeh.usuarios(usuario_id,identificador,activo) VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-000000000004','qa-b1-inactive',false);
+INSERT INTO sigeh.usuario_roles(usuario_id,rol_id,hospital_id,servicio_id,vigente_desde,vigente_hasta) VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-000000000004','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','11111111-1111-4111-8111-111111111111',NULL,'2000-01-01','2100-01-01');
+INSERT INTO sigeh.usuarios(usuario_id,identificador,activo) VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-000000000005','qa-b1-admin-without-permission',true);
+INSERT INTO sigeh.usuario_roles(usuario_id,rol_id,hospital_id,servicio_id,vigente_desde,vigente_hasta) VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-000000000005',(SELECT rol_id FROM sigeh.roles WHERE codigo='ADMIN_SISTEMA'),'11111111-1111-4111-8111-111111111111',NULL,'2000-01-01','2100-01-01');
+INSERT INTO sigeh.usuarios(usuario_id,identificador,activo) VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-000000000006','qa-b1-incoherent',true);
+INSERT INTO sigeh.usuario_roles(usuario_id,rol_id,hospital_id,servicio_id,vigente_desde,vigente_hasta) VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-000000000006','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','11111111-1111-4111-8111-111111111111','33333333-3333-4333-8333-000000000003','2000-01-01','2100-01-01');
+COMMIT;
+-- Sin ON CONFLICT/DELETE: colisiones abortan el lote, no se pisan datos existentes.

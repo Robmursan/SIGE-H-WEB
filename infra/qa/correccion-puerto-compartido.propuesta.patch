@@ -1,0 +1,8 @@
+# PROPUESTA NO APLICADA: requiere confirmar consumidores host/LAN antes de reiniciar servicio.
+# Destino externo: /home/robreport/SIGE-H-API/infra/docker/docker-compose.yml
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -10,2 +10,2 @@
+     ports:
+-      - "5432:5432"
++      - "127.0.0.1:5432:5432"

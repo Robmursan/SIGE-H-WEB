@@ -1,0 +1,339 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1": {
+      "get": {
+        "operationId": "AppController_getHello",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "App"
+        ]
+      }
+    },
+    "/api/v1/health/live": {
+      "get": {
+        "description": "Verifica que el proceso de la API NestJS está activo y respondiendo peticiones HTTP sin depender de PostgreSQL.",
+        "operationId": "getHealthLive",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Proceso API activo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LivenessResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Health básico de liveness de la API (CU-OPS-01)",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/health/ready": {
+      "get": {
+        "description": "Verifica conectividad con el pool de PostgreSQL (SELECT 1) y la existencia del esquema configurado antes de recibir tráfico operativo.",
+        "operationId": "getHealthReady",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "API y esquema PostgreSQL listos para operar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "PostgreSQL inaccesible o esquema sigeh no disponible (respuesta sanitizada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Readiness de PostgreSQL y esquema sigeh (CU-OPS-02)",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "description": "Ejecuta la verificación de readiness contra el pool de PostgreSQL en el esquema configurado y retorna el estado operativo sin exponer credenciales.",
+        "operationId": "getHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "API y base de datos PostgreSQL operativas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Fallo de conectividad o indisponibilidad de PostgreSQL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Verificar salud de la API y conexión a PostgreSQL (compatibilidad Sprint 0 / CU-OPS-02)",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/meta/version": {
+      "get": {
+        "description": "Metadatos técnicos sin datos hospitalarios. No requiere sesión ni consulta PostgreSQL. No acredita readiness ni compatibilidad de clientes.",
+        "operationId": "getApiContractVersion",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiVersionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Consultar versión del contrato API (CU-OPS-03)",
+        "tags": [
+          "Operaciones"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "SIGE-H API",
+    "description": "Sistema Integral de Gestión de Enfermería Hospitalaria - API REST",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "LivenessResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Estado de vida (liveness) del proceso API (CU-OPS-01)",
+            "example": "ok",
+            "enum": [
+              "ok"
+            ]
+          },
+          "service": {
+            "type": "string",
+            "description": "Identificador lógico del servicio API",
+            "example": "sige-h-api"
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "Marca temporal UTC de la verificación en formato ISO 8601",
+            "example": "2026-11-10T22:00:00.000Z"
+          }
+        },
+        "required": [
+          "status",
+          "service",
+          "timestamp"
+        ]
+      },
+      "DatabaseHealthUpDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Estado de conectividad con PostgreSQL",
+            "example": "up",
+            "enum": [
+              "up"
+            ]
+          },
+          "schema": {
+            "type": "string",
+            "description": "Esquema configurado en PostgreSQL",
+            "example": "sigeh"
+          },
+          "schemaVerified": {
+            "type": "boolean",
+            "description": "Indica si el esquema configurado fue verificado en information_schema.schemata",
+            "example": true
+          },
+          "latencyMs": {
+            "type": "number",
+            "description": "Latencia de verificación SQL en milisegundos",
+            "example": 2
+          }
+        },
+        "required": [
+          "status",
+          "schema",
+          "schemaVerified",
+          "latencyMs"
+        ]
+      },
+      "HealthResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Estado general de preparación (readiness) del servicio",
+            "example": "ok",
+            "enum": [
+              "ok"
+            ]
+          },
+          "service": {
+            "type": "string",
+            "description": "Identificador lógico del servicio API",
+            "example": "sige-h-api"
+          },
+          "database": {
+            "description": "Diagnóstico de conectividad y esquema en PostgreSQL",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DatabaseHealthUpDto"
+              }
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "Marca temporal UTC de la verificación en formato ISO 8601",
+            "example": "2026-11-10T22:00:00.000Z"
+          }
+        },
+        "required": [
+          "status",
+          "service",
+          "database",
+          "timestamp"
+        ]
+      },
+      "DatabaseHealthDownDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Estado de conectividad o preparación de PostgreSQL cuando falla la sonda",
+            "example": "down",
+            "enum": [
+              "down"
+            ]
+          },
+          "schema": {
+            "type": "string",
+            "description": "Esquema configurado en PostgreSQL",
+            "example": "sigeh"
+          },
+          "schemaVerified": {
+            "type": "boolean",
+            "description": "Indica si el esquema pudo ser verificado antes del fallo",
+            "example": false
+          }
+        },
+        "required": [
+          "status",
+          "schema",
+          "schemaVerified"
+        ]
+      },
+      "HealthErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Estado general cuando hay degradación crítica o falta de preparación",
+            "example": "error",
+            "enum": [
+              "error"
+            ]
+          },
+          "service": {
+            "type": "string",
+            "description": "Identificador lógico del servicio API",
+            "example": "sige-h-api"
+          },
+          "database": {
+            "description": "Diagnóstico sanitizado de la base de datos",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DatabaseHealthDownDto"
+              }
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "Mensaje público sanitizado sin exponer credenciales ni trazas internas",
+            "example": "Base de datos PostgreSQL no disponible"
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "Marca temporal UTC del fallo en formato ISO 8601",
+            "example": "2026-11-10T22:00:00.000Z"
+          }
+        },
+        "required": [
+          "status",
+          "service",
+          "database",
+          "message",
+          "timestamp"
+        ]
+      },
+      "ApiVersionResponseDto": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "example": "1.0.0",
+            "description": "Versión del contrato API, igual a info.version de OpenAPI."
+          },
+          "apiBasePath": {
+            "type": "string",
+            "example": "/api/v1",
+            "description": "Prefijo público de la API."
+          }
+        },
+        "required": [
+          "apiVersion",
+          "apiBasePath"
+        ]
+      }
+    }
+  }
+}

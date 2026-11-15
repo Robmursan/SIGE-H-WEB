@@ -1,0 +1,31 @@
+# PREPARADO_NO_EJECUTADO. No ejecutar up sin autorización de QA.
+name: sigeh-qa-b1
+services:
+  postgres-qa:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: sigeh_qa
+      POSTGRES_USER: sigeh_qa_bootstrap
+      POSTGRES_PASSWORD_FILE: /run/secrets/qa_bootstrap_password
+    secrets:
+      - qa_bootstrap_password
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - qa_data:/var/lib/postgresql/data
+    networks:
+      - qa_isolated
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sigeh_qa_bootstrap -d sigeh_qa"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: "no"
+networks:
+  qa_isolated:
+    internal: true
+volumes:
+  qa_data:
+secrets:
+  qa_bootstrap_password:
+    file: ${SIGEH_QA_ADMIN_PASSWORD_FILE:?Definir archivo secreto externo antes de validar o iniciar QA}
