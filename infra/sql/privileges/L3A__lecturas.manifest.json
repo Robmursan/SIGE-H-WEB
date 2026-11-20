@@ -1,0 +1,51 @@
+{
+  "status": "PROPOSED_NOT_APPLIED",
+  "database": "sigeh_qa",
+  "schema": "sigeh",
+  "role": "sigeh_qa_app",
+  "privilege": "SELECT",
+  "tables": {
+    "empleados": [
+      "empleado_id",
+      "nombres",
+      "primer_apellido",
+      "activo"
+    ],
+    "contratos": [
+      "contrato_id",
+      "empleado_id",
+      "hospital_id",
+      "inicio",
+      "fin",
+      "estado"
+    ],
+    "adscripciones": [
+      "adscripcion_id",
+      "contrato_id",
+      "servicio_id",
+      "clase",
+      "inicio",
+      "fin"
+    ],
+    "programacion_laboral": [
+      "programacion_id",
+      "empleado_id",
+      "contrato_id",
+      "hospital_id",
+      "servicio_id",
+      "horario_id",
+      "inicio_programado",
+      "fin_programado",
+      "estado"
+    ],
+    "horarios": [
+      "horario_id",
+      "codigo"
+    ]
+  },
+  "facultades_propuestas_no_insertadas": [
+    "PERSONAL_CONSULTAR",
+    "PROGRAMACION_CONSULTAR",
+    "TABLERO_CONSULTAR"
+  ]
+}

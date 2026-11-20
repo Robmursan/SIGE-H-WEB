@@ -8,6 +8,7 @@ import {
   type OrganizationCatalog,
   type OrganizationQueryDto,
 } from '../dto/organization-query.dto.js';
+import { type OrganizationReferencePageDto } from '../dto/organization-reference.dto.js';
 
 // Fixed SQL only; neither table names nor expressions are supplied by a client.
 const CATALOG_SQL: Record<OrganizationCatalog, string> = {
@@ -67,6 +68,52 @@ interface ItemRow extends QueryResultRow {
 @Injectable()
 export class OrganizationRepository {
   constructor(private readonly postgres: PostgresService) {}
+
+  async references(
+    usuarioId: string,
+    catalog: Exclude<OrganizationCatalog, 'subareas'>,
+    query: OrganizationQueryDto,
+  ): Promise<OrganizationReferencePageDto> {
+    const projections = {
+      hospitales:
+        'h.hospital_id AS id,h.hospital_id,NULL::uuid AS division_id,NULL::uuid AS servicio_id,h.activo',
+      divisiones:
+        'd.division_id AS id,d.hospital_id,d.division_id,NULL::uuid AS servicio_id,d.activo',
+      servicios:
+        's.servicio_id AS id,s.hospital_id,s.division_id,s.servicio_id,s.activo',
+    };
+    // Reuse the exact scoped catalog predicates; replace only a fixed SELECT projection.
+    const text = CATALOG_SQL[catalog].replace(
+      /^SELECT[\s\S]+?\n\s*FROM/,
+      `SELECT ${projections[catalog]}\n FROM`,
+    );
+    const result = await this.postgres.query<ItemRow & { activo: boolean }>(
+      `${AUTHORIZED_SCOPES_CTE}\n${text}`,
+      [
+        usuarioId,
+        ORGANIZATION_CATALOG_PERMISSION,
+        query.hospitalId ?? null,
+        query.divisionId ?? null,
+        query.servicioId ?? null,
+        query.cursor ?? null,
+        query.limit + 1,
+      ],
+    );
+    const more = result.rows.length > query.limit;
+    const rows = result.rows.slice(0, query.limit);
+    return {
+      items: rows.map((row) => ({
+        id: row.id,
+        hospitalId: row.hospital_id,
+        divisionId: row.division_id,
+        servicioId: row.servicio_id,
+        activo: row.activo,
+      })),
+      nextCursor: more ? rows.at(-1)!.id : null,
+      limit: query.limit,
+      order: 'id:asc',
+    };
+  }
 
   async list(
     usuarioId: string,

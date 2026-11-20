@@ -17,12 +17,14 @@ import {
   ApiOkResponse,
   ApiNoContentResponse,
   ApiOperation,
+  ApiParam,
   ApiServiceUnavailableResponse,
   ApiTags,
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { type Request } from 'express';
+import { ReadHttpErrorDto } from '../../lecturas/read-error.dto.js';
 import { IamService } from '../application/iam.service.js';
 import { type Principal } from '../domain/session-model.js';
 import {
@@ -36,12 +38,16 @@ import {
   TokensDto,
   ProfileDto,
   SessionDto,
+  IamRateLimitErrorDto,
 } from './auth.dto.js';
 
 @ApiTags('IAM')
-@ApiBadRequestResponse({ description: 'Entrada inválida, sin datos sensibles' })
-@ApiUnauthorizedResponse({ description: 'Credencial o sesión inválida' })
+@ApiUnauthorizedResponse({
+  description: 'Credencial o sesión inválida',
+  type: ReadHttpErrorDto,
+})
 @ApiServiceUnavailableResponse({
+  type: ReadHttpErrorDto,
   description: 'IAM deshabilitado o persistencia no disponible',
 })
 @UseGuards(IamAvailabilityGuard)
@@ -49,6 +55,10 @@ import {
 export class AuthController {
   constructor(private readonly iam: IamService) {}
   @Post('login')
+  @ApiBadRequestResponse({
+    description: 'Entrada inválida, sin datos sensibles',
+    type: ReadHttpErrorDto,
+  })
   @HttpCode(200)
   @ApiOperation({
     operationId: 'iamLogin',
@@ -56,6 +66,7 @@ export class AuthController {
   })
   @ApiOkResponse({ type: TokensDto })
   @ApiTooManyRequestsResponse({
+    type: IamRateLimitErrorDto,
     description: 'Límite persistente de intentos o capacidad KDF',
   })
   login(@Body() dto: LoginDto, @Req() request: Request) {
@@ -66,13 +77,20 @@ export class AuthController {
     );
   }
   @Post('refresh')
+  @ApiBadRequestResponse({
+    description: 'Entrada inválida, sin datos sensibles',
+    type: ReadHttpErrorDto,
+  })
   @HttpCode(200)
   @ApiOperation({
     operationId: 'iamRefresh',
     summary: 'Rotar refresh opaco; replay revoca familia',
   })
   @ApiOkResponse({ type: TokensDto })
-  @ApiTooManyRequestsResponse({ description: 'Límite persistente' })
+  @ApiTooManyRequestsResponse({
+    description: 'Límite persistente',
+    type: IamRateLimitErrorDto,
+  })
   refresh(@Body() dto: RefreshDto, @Req() request: Request) {
     return this.iam.refresh(dto.refreshToken, request.ip ?? 'unknown');
   }
@@ -88,6 +106,10 @@ export class AuthController {
     return this.iam.profile(p);
   }
   @Post('logout')
+  @ApiNotFoundResponse({
+    description: 'Sesión no disponible al revocar',
+    type: ReadHttpErrorDto,
+  })
   @HttpCode(204)
   @UseGuards(SessionGuard)
   @ApiBearerAuth()
@@ -111,6 +133,11 @@ export class AuthController {
     return this.iam.sessions(p);
   }
   @Delete('sessions/:sessionId')
+  @ApiParam({ name: 'sessionId', type: String, format: 'uuid' })
+  @ApiBadRequestResponse({
+    description: 'Entrada inválida, sin datos sensibles',
+    type: ReadHttpErrorDto,
+  })
   @HttpCode(204)
   @UseGuards(SessionGuard)
   @ApiBearerAuth()
@@ -119,7 +146,10 @@ export class AuthController {
     summary: 'Revocar una sesión propia',
   })
   @ApiNoContentResponse()
-  @ApiNotFoundResponse({ description: 'Sesión no disponible para el actor' })
+  @ApiNotFoundResponse({
+    description: 'Sesión no disponible para el actor',
+    type: ReadHttpErrorDto,
+  })
   revoke(
     @CurrentPrincipal() p: Principal,
     @Param('sessionId', new ParseUUIDPipe()) id: string,

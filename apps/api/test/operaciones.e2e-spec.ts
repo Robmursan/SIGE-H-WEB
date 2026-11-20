@@ -99,10 +99,20 @@ describe('CU-OPS-03 — contrato HTTP sin PostgreSQL', () => {
       '/api/v1/auth/refresh',
       '/api/v1/auth/sessions',
       '/api/v1/auth/sessions/{sessionId}',
+      '/api/v1/contratos/{contratoId}/adscripciones',
+      '/api/v1/empleados',
+      '/api/v1/empleados/{empleadoId}',
       '/api/v1/health',
       '/api/v1/health/live',
       '/api/v1/health/ready',
+      '/api/v1/hospitales',
+      '/api/v1/hospitales/{hospitalId}/divisiones',
       '/api/v1/meta/version',
+      '/api/v1/pases-lista',
+      '/api/v1/programaciones',
+      '/api/v1/programaciones/{programacionId}/asistencia',
+      '/api/v1/servicios',
+      '/api/v1/tableros/coordinacion',
     ]);
     const operation = document.paths['/api/v1/meta/version'].get;
     expect(operation.operationId).toBe('getApiContractVersion');

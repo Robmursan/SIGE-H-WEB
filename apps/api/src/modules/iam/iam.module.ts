@@ -28,6 +28,7 @@ import {
     { provide: IDENTITY_VERIFIER, useExisting: IamService },
   ],
   exports: [
+    IamSettings,
     AccessRepository,
     IDENTITY_VERIFIER,
     IamService,
