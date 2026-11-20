@@ -14,6 +14,7 @@ describe('Frontera interna de consultas organizativas', () => {
     new UnavailableIdentityVerifier(),
     access,
     repository,
+    {} as never,
   );
 
   it('la implementación de identidad actual siempre bloquea antes de SQL', async () => {

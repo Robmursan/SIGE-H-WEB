@@ -30,9 +30,6 @@ describe('B1 — exposición HTTP bloqueada por defecto', () => {
   });
 
   it.each([
-    '/api/v1/hospitales',
-    '/api/v1/hospitales/11111111-1111-4111-8111-111111111111/divisiones',
-    '/api/v1/servicios',
     '/api/v1/servicios/33333333-3333-4333-8333-333333333333/subareas',
     '/api/v1/organizacion/arbol',
     '/api/v1/roles',
@@ -42,6 +39,13 @@ describe('B1 — exposición HTTP bloqueada por defecto', () => {
       .get(path)
       .set('Authorization', 'Bearer unverified-input')
       .expect(404);
+  });
+  it.each([
+    '/api/v1/hospitales',
+    '/api/v1/hospitales/11111111-1111-4111-8111-111111111111/divisiones',
+    '/api/v1/servicios',
+  ])('ORG %s deshabilitado antes de SQL', async (path) => {
+    await request(app.getHttpServer()).get(path).expect(503);
   });
   it.each([
     '/api/v1/auth/login',
@@ -67,10 +71,20 @@ describe('B1 — exposición HTTP bloqueada por defecto', () => {
       '/api/v1/auth/refresh',
       '/api/v1/auth/sessions',
       '/api/v1/auth/sessions/{sessionId}',
+      '/api/v1/contratos/{contratoId}/adscripciones',
+      '/api/v1/empleados',
+      '/api/v1/empleados/{empleadoId}',
       '/api/v1/health',
       '/api/v1/health/live',
       '/api/v1/health/ready',
+      '/api/v1/hospitales',
+      '/api/v1/hospitales/{hospitalId}/divisiones',
       '/api/v1/meta/version',
+      '/api/v1/pases-lista',
+      '/api/v1/programaciones',
+      '/api/v1/programaciones/{programacionId}/asistencia',
+      '/api/v1/servicios',
+      '/api/v1/tableros/coordinacion',
     ]);
     expect(body.paths['/api/v1/meta/version'].get.operationId).toBe(
       'getApiContractVersion',

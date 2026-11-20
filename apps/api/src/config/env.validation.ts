@@ -113,6 +113,12 @@ export function isInsecureJwtSecret(secret: unknown): boolean {
 }
 
 export class EnvironmentVariables {
+  @IsIn(['true', 'false'])
+  L3A_READS_ENABLED = 'false';
+
+  @IsIn(['true', 'false'])
+  ASISTENCIA_ENABLED = 'false';
+
   @IsOptional()
   @IsIn(['development', 'test', 'production'])
   NODE_ENV: 'development' | 'test' | 'production' = 'development';
@@ -247,6 +253,8 @@ export function validateEnv(
     parseJwtExpirationSeconds(rawJwtExpiration);
 
   const mergedConfig: Record<string, unknown> = {
+    L3A_READS_ENABLED: config.L3A_READS_ENABLED ?? 'false',
+    ASISTENCIA_ENABLED: config.ASISTENCIA_ENABLED ?? 'false',
     NODE_ENV: config.NODE_ENV ?? 'development',
     PORT: config.PORT ?? 3000,
     DB_HOST: config.DB_HOST ?? '127.0.0.1',

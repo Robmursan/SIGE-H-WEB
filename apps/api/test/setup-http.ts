@@ -6,6 +6,8 @@ import { vi } from 'vitest';
 for (const [name, value] of Object.entries({
   NODE_ENV: 'test',
   IAM_V2_ENABLED: 'false',
+  L3A_READS_ENABLED: 'false',
+  ASISTENCIA_ENABLED: 'false',
   DB_HOST: '127.0.0.1',
   DB_PORT: '55432',
   DB_NAME: 'sigeh_qa',

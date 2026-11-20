@@ -1,13 +1,21 @@
-import {
-  type INestApplication,
-  Logger,
-  ValidationPipe,
-} from '@nestjs/common';
+import { type INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
 import { API_CONTRACT } from './config/api-contract.js';
+
+export function createOpenApiDocument(app: INestApplication) {
+  const config = new DocumentBuilder()
+    .setTitle('SIGE-H API')
+    .setDescription(
+      'Sistema Integral de Gestión de Enfermería Hospitalaria - API REST',
+    )
+    .setVersion(API_CONTRACT.version)
+    .addBearerAuth()
+    .build();
+  return SwaggerModule.createDocument(app, config);
+}
 
 export function configureApp(app: INestApplication): void {
   app.setGlobalPrefix(API_CONTRACT.globalPrefix);
@@ -30,16 +38,7 @@ export function configureApp(app: INestApplication): void {
     configService?.get<string>('NODE_ENV', 'development') ?? 'development';
 
   if (swaggerEnabled === 'true' && nodeEnv !== 'production') {
-    const swaggerConfig = new DocumentBuilder()
-      .setTitle('SIGE-H API')
-      .setDescription(
-        'Sistema Integral de Gestión de Enfermería Hospitalaria - API REST',
-      )
-      .setVersion(API_CONTRACT.version)
-      .addBearerAuth()
-      .build();
-
-    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    const document = createOpenApiDocument(app);
     SwaggerModule.setup('docs', app, document, {
       jsonDocumentUrl: 'docs/openapi.json',
     });

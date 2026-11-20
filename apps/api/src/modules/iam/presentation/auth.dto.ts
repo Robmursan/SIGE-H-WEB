@@ -60,6 +60,14 @@ export class SessionDto {
   @ApiProperty({ format: 'date-time' }) createdAt!: Date;
   @ApiProperty({ format: 'date-time' }) expiresAt!: Date;
   @ApiProperty({ format: 'date-time' }) idleExpiresAt!: Date;
-  @ApiProperty({ format: 'date-time', nullable: true }) revokedAt!: Date | null;
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
+  revokedAt!: Date | null;
   @ApiProperty() current!: boolean;
+}
+
+// The implemented 429 uses HttpException(string, 429), not a built-in subclass.
+// Nest therefore emits these two fields without an `error` label.
+export class IamRateLimitErrorDto {
+  @ApiProperty({ type: 'integer', enum: [429] }) statusCode!: number;
+  @ApiProperty({ type: String }) message!: string;
 }

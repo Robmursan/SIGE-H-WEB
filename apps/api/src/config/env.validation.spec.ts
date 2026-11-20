@@ -38,6 +38,29 @@ describe('validateEnv', () => {
     expect(result.JWT_EXPIRATION_SECONDS).toBe(28800);
   });
 
+  it('preserva la activación explícita de lecturas y deniega valores ambiguos', () => {
+    expect(validateEnv(validBaseEnv).L3A_READS_ENABLED).toBe('false');
+    expect(
+      validateEnv({ ...validBaseEnv, L3A_READS_ENABLED: 'true' })
+        .L3A_READS_ENABLED,
+    ).toBe('true');
+    expect(() =>
+      validateEnv({ ...validBaseEnv, L3A_READS_ENABLED: '1' }),
+    ).toThrow(/L3A_READS_ENABLED/);
+  });
+
+  it('asistencia permanece deshabilitada salvo true explícito y rechaza valores ambiguos', () => {
+    expect(validateEnv(validBaseEnv).ASISTENCIA_ENABLED).toBe('false');
+    expect(
+      validateEnv({ ...validBaseEnv, ASISTENCIA_ENABLED: 'true' })
+        .ASISTENCIA_ENABLED,
+    ).toBe('true');
+    for (const value of ['1', 'yes', true])
+      expect(() =>
+        validateEnv({ ...validBaseEnv, ASISTENCIA_ENABLED: value }),
+      ).toThrow(/ASISTENCIA_ENABLED/);
+  });
+
   it('acepta valores de JWT_EXPIRATION exactamente en las fronteras mínima (60s/1m) y máxima (12h/43200s)', () => {
     const minResult = validateEnv({
       ...validBaseEnv,
