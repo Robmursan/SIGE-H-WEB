@@ -1,3 +1,7 @@
+import {
+  OwnContextsController,
+  OwnContextsRepository,
+} from './presentation/contexts.controller.js';
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { IDENTITY_VERIFIER } from './application/identity-verifier.port.js';
@@ -15,9 +19,10 @@ import {
 
 @Module({
   imports: [JwtModule.register({})],
-  controllers: [AuthController],
+  controllers: [AuthController, OwnContextsController],
   providers: [
     AccessRepository,
+    OwnContextsRepository,
     IamRepository,
     IamSettings,
     PasswordHasher,

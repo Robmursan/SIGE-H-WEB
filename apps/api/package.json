@@ -23,7 +23,9 @@
     "test:integration": "vitest run --config ./vitest.config.integration.ts",
     "test:smoke": "node test/runtime-ops.smoke.mjs",
     "start:qa": "node scripts/start-qa.mjs",
-    "test:qa:readonly": "node test/qa-runtime.readonly.mjs"
+    "test:qa:readonly": "node test/qa-runtime.readonly.mjs",
+    "openapi:export": "node scripts/export-openapi.mjs",
+    "openapi:check": "node scripts/export-openapi.mjs --check"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

@@ -3,6 +3,7 @@ import { assertQaTarget, QA_PASSWORD_FILE } from '../database/qa-connection.js';
 import { plainToInstance, Type } from 'class-transformer';
 import {
   IsIn,
+  IsIP,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -113,6 +114,13 @@ export function isInsecureJwtSecret(secret: unknown): boolean {
 }
 
 export class EnvironmentVariables {
+  @IsIP() HOST = '127.0.0.1';
+  @IsIn(['true', 'false']) WORKFORCE_READS_ENABLED = 'false';
+  @IsIn(['true', 'false']) WORKFORCE_WRITES_ENABLED = 'false';
+  @IsIn(['true', 'false']) ORG_ADMIN_READS_ENABLED = 'false';
+  @IsIn(['true', 'false']) ORG_ADMIN_WRITES_ENABLED = 'false';
+  @IsIn(['true', 'false']) CAL_SIMULATION_ENABLED = 'false';
+  @IsIn(['true', 'false']) CAL_PUBLICATION_ENABLED = 'false';
   @IsIn(['true', 'false'])
   L3A_READS_ENABLED = 'false';
 
@@ -253,6 +261,13 @@ export function validateEnv(
     parseJwtExpirationSeconds(rawJwtExpiration);
 
   const mergedConfig: Record<string, unknown> = {
+    HOST: config.HOST ?? '127.0.0.1',
+    WORKFORCE_READS_ENABLED: config.WORKFORCE_READS_ENABLED ?? 'false',
+    WORKFORCE_WRITES_ENABLED: config.WORKFORCE_WRITES_ENABLED ?? 'false',
+    ORG_ADMIN_READS_ENABLED: config.ORG_ADMIN_READS_ENABLED ?? 'false',
+    ORG_ADMIN_WRITES_ENABLED: config.ORG_ADMIN_WRITES_ENABLED ?? 'false',
+    CAL_SIMULATION_ENABLED: config.CAL_SIMULATION_ENABLED ?? 'false',
+    CAL_PUBLICATION_ENABLED: config.CAL_PUBLICATION_ENABLED ?? 'false',
     L3A_READS_ENABLED: config.L3A_READS_ENABLED ?? 'false',
     ASISTENCIA_ENABLED: config.ASISTENCIA_ENABLED ?? 'false',
     NODE_ENV: config.NODE_ENV ?? 'development',

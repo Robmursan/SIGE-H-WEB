@@ -257,8 +257,8 @@ describe('L3A preparado, HTTP local con tripwire (no QA)', () => {
           )
           .map(([, op]) => (op as { operationId: string }).operationId),
       );
-      expect(ids).toHaveLength(21);
-      expect(new Set(ids).size).toBe(21);
+      expect(ids).toHaveLength(49);
+      expect(new Set(ids).size).toBe(49);
       expect(forbidden).not.toHaveBeenCalled();
     } finally {
       await app.close();

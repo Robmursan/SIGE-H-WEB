@@ -1,49 +1,10 @@
-import { type INestApplication, Logger, ValidationPipe } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
-import { API_CONTRACT } from './config/api-contract.js';
-
-export function createOpenApiDocument(app: INestApplication) {
-  const config = new DocumentBuilder()
-    .setTitle('SIGE-H API')
-    .setDescription(
-      'Sistema Integral de Gestión de Enfermería Hospitalaria - API REST',
-    )
-    .setVersion(API_CONTRACT.version)
-    .addBearerAuth()
-    .build();
-  return SwaggerModule.createDocument(app, config);
-}
-
-export function configureApp(app: INestApplication): void {
-  app.setGlobalPrefix(API_CONTRACT.globalPrefix);
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      forbidUnknownValues: true,
-    }),
-  );
-
-  app.enableShutdownHooks();
-
-  const configService = app.get(ConfigService, { strict: false });
-  const swaggerEnabled =
-    configService?.get<string>('SWAGGER_ENABLED', 'true') ?? 'true';
-  const nodeEnv =
-    configService?.get<string>('NODE_ENV', 'development') ?? 'development';
-
-  if (swaggerEnabled === 'true' && nodeEnv !== 'production') {
-    const document = createOpenApiDocument(app);
-    SwaggerModule.setup('docs', app, document, {
-      jsonDocumentUrl: 'docs/openapi.json',
-    });
-  }
-}
+import { configureApp } from './config/http-app.js';
+export { configureApp } from './config/http-app.js';
+export { createOpenApiDocument } from './config/openapi-document.js';
 
 async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
@@ -54,11 +15,10 @@ async function bootstrap(): Promise<void> {
   const configService = app.get(ConfigService);
   const port = Number(configService.get<number>('PORT', 3000));
 
-  await app.listen(port);
-  logger.log(`Servidor escuchando en http://localhost:${port}/api/v1`);
-  logger.log(
-    `Documentación OpenAPI disponible en http://localhost:${port}/docs`,
-  );
+  const host = configService.get<string>('HOST', '127.0.0.1');
+  await app.listen(port, host);
+  logger.log(`Servidor escuchando en http://${host}:${port}/api/v1`);
+  logger.log(`Documentación OpenAPI disponible en http://${host}:${port}/docs`);
 }
 
 const isDirectExecution =

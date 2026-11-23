@@ -33,12 +33,13 @@ describe('B1 — exposición HTTP bloqueada por defecto', () => {
     '/api/v1/servicios/33333333-3333-4333-8333-333333333333/subareas',
     '/api/v1/organizacion/arbol',
     '/api/v1/roles',
-  ])('GET %s no está publicado', async (path) => {
-    await request(app.getHttpServer()).get(path).expect(404);
+  ])('GET %s permanece inaccesible por defecto', async (path) => {
+    const status = path === '/api/v1/roles' ? 404 : 503;
+    await request(app.getHttpServer()).get(path).expect(status);
     await request(app.getHttpServer())
       .get(path)
       .set('Authorization', 'Bearer unverified-input')
-      .expect(404);
+      .expect(status);
   });
   it.each([
     '/api/v1/hospitales',
@@ -63,29 +64,53 @@ describe('B1 — exposición HTTP bloqueada por defecto', () => {
     const { body } = await request(app.getHttpServer())
       .get('/docs/openapi.json')
       .expect(200);
-    expect(Object.keys(body.paths).sort()).toEqual([
-      '/api/v1',
-      '/api/v1/auth/login',
-      '/api/v1/auth/logout',
-      '/api/v1/auth/me',
-      '/api/v1/auth/refresh',
-      '/api/v1/auth/sessions',
-      '/api/v1/auth/sessions/{sessionId}',
-      '/api/v1/contratos/{contratoId}/adscripciones',
-      '/api/v1/empleados',
-      '/api/v1/empleados/{empleadoId}',
-      '/api/v1/health',
-      '/api/v1/health/live',
-      '/api/v1/health/ready',
-      '/api/v1/hospitales',
-      '/api/v1/hospitales/{hospitalId}/divisiones',
-      '/api/v1/meta/version',
-      '/api/v1/pases-lista',
-      '/api/v1/programaciones',
-      '/api/v1/programaciones/{programacionId}/asistencia',
-      '/api/v1/servicios',
-      '/api/v1/tableros/coordinacion',
-    ]);
+    expect(Object.keys(body.paths).sort()).toEqual(
+      [
+        '/api/v1',
+        '/api/v1/auth/login',
+        '/api/v1/auth/logout',
+        '/api/v1/auth/me',
+        '/api/v1/auth/refresh',
+        '/api/v1/auth/sessions',
+        '/api/v1/auth/sessions/{sessionId}',
+        '/api/v1/contratos/{contratoId}/adscripciones',
+        '/api/v1/empleados',
+        '/api/v1/empleados/{empleadoId}',
+        '/api/v1/health',
+        '/api/v1/health/live',
+        '/api/v1/health/ready',
+        '/api/v1/hospitales',
+        '/api/v1/hospitales/{hospitalId}/divisiones',
+        '/api/v1/meta/version',
+        '/api/v1/pases-lista',
+        '/api/v1/programaciones',
+        '/api/v1/programaciones/{programacionId}/asistencia',
+        '/api/v1/servicios',
+        '/api/v1/tableros/coordinacion',
+        '/api/v1/auth/me/contextos',
+        '/api/v1/personal/elegibles',
+        '/api/v1/servicios/{servicioId}/distribucion',
+        '/api/v1/servicios/{servicioId}/rotaciones',
+        '/api/v1/horarios',
+        '/api/v1/patrones-laborales',
+        '/api/v1/contratos/{contratoId}/patrones',
+        '/api/v1/vacaciones',
+        '/api/v1/incapacidades',
+        '/api/v1/incidencias',
+        '/api/v1/incidencias/{incidenciaId}/versiones',
+
+        '/api/v1/divisiones',
+        '/api/v1/divisiones/{divisionId}',
+        '/api/v1/servicios/{servicioId}',
+        '/api/v1/subareas',
+        '/api/v1/subareas/{subareaId}',
+        '/api/v1/servicios/{servicioId}/subareas',
+        '/api/v1/organizacion/arbol',
+        '/api/v1/programaciones/simular',
+        '/api/v1/programaciones/generar',
+        '/api/v1/contratos/{contratoId}/configuracion-laboral',
+      ].sort(),
+    );
     expect(body.paths['/api/v1/meta/version'].get.operationId).toBe(
       'getApiContractVersion',
     );

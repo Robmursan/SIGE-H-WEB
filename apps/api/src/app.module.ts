@@ -1,3 +1,5 @@
+import { GestionLaboralModule } from './modules/gestion-laboral/gestion-laboral.module.js';
+import { CalendarioModule } from './modules/calendario/calendario.module.js';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller.js';
@@ -28,6 +30,8 @@ import { OperacionesModule } from './modules/operaciones/operaciones.module.js';
     OrganizacionModule,
     PersonalModule,
     ProgramacionModule,
+    CalendarioModule,
+    GestionLaboralModule,
     AsistenciaModule,
     CoberturaModule,
     BalancesModule,
