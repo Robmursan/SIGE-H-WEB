@@ -23,10 +23,18 @@ Object.assign(process.env, {
   IAM_V2_ENABLED: 'false',
   L3A_READS_ENABLED: 'false',
   ASISTENCIA_ENABLED: 'false',
+  WORKFORCE_READS_ENABLED: 'false',
+  WORKFORCE_WRITES_ENABLED: 'false',
+  ORG_ADMIN_READS_ENABLED: 'false',
+  ORG_ADMIN_WRITES_ENABLED: 'false',
+  CAL_SIMULATION_ENABLED: 'false',
+  CAL_PUBLICATION_ENABLED: 'false',
   SWAGGER_ENABLED: 'true',
 });
 Logger.overrideLogger(false);
 const { AppModule } = await import('../dist/app.module.js');
+const { CONTRACT_OPERATIONS, CONTRACT_REVISION } =
+  await import('../dist/config/contract-operations.js');
 const { PG_POOL } = await import('../dist/database/postgres.service.js');
 const { createOpenApiDocument } = await import('../dist/main.js');
 const forbidden = () => {
@@ -96,15 +104,39 @@ try {
       const attendance =
         route === '/api/v1/pases-lista' ||
         route === '/api/v1/programaciones/{programacionId}/asistencia';
-      op['x-sigeh-status'] = attendance
-        ? 'local-mock-tested-disabled-awaiting-ephemeral-validation'
-        : prepared.includes(route)
-          ? readsTested
-            ? 'qa-tested-disabled-by-default'
-            : 'prepared-disabled-awaiting-qa-functional-validation'
-          : qa.includes(route)
-            ? 'qa-tested-disabled-by-default'
-            : 'local-tested';
+      const newPrepared =
+        /^(getAdmin|listAdmin|createAdmin|updateAdmin|simulateServiceTomorrow|publishServiceTomorrow|getContractLaborConfiguration|listEligibleContracts|listServiceRotations|createFormalAdscription|createServiceRotation|listLabor|createLabor|assignContractPattern|captureVacationPeriod|captureDisabilityPeriod)/.test(
+          op.operationId,
+        );
+      op['x-sigeh-status'] = newPrepared
+        ? 'local-mock-tested-disabled-awaiting-sql-and-policy-approval'
+        : attendance
+          ? 'local-mock-tested-disabled-awaiting-ephemeral-validation'
+          : prepared.includes(route)
+            ? readsTested
+              ? 'qa-tested-disabled-by-default'
+              : 'prepared-disabled-awaiting-qa-functional-validation'
+            : qa.includes(route)
+              ? 'qa-tested-disabled-by-default'
+              : 'local-tested';
+      if (op.operationId === 'iamOwnContexts') {
+        op['x-sigeh-status'] = 'prepared-own-contexts-awaiting-sql-validation';
+        op['x-sigeh-default-enabled'] = false;
+      }
+      if (newPrepared) {
+        op['x-sigeh-default-enabled'] = false;
+        op['x-sigeh-sql-privileges'] =
+          'not-authorized-awaiting-explicit-review';
+        for (const code of ['400', '401', '403', '503'])
+          if (
+            op.responses[code]?.content?.['application/json']?.schema?.$ref !==
+            '#/components/schemas/ReadHttpErrorDto'
+          )
+            throw Error('OPENAPI_PREPARED_ERROR_INVALID');
+        for (const param of op.parameters ?? [])
+          if (param.in === 'path' && param.schema?.format !== 'uuid')
+            throw Error('OPENAPI_PREPARED_UUID_INVALID');
+      }
       if (attendance) {
         op['x-sigeh-sql-privileges'] =
           'not-authorized-awaiting-ephemeral-package';
@@ -176,9 +208,18 @@ try {
     }
   };
   walk(spec);
-  if (!spec.openapi.startsWith('3.0.') || Object.keys(spec.paths).length !== 21)
+  if (
+    !spec.openapi.startsWith('3.0.') ||
+    Object.keys(spec.paths).length !==
+      new Set(
+        Object.keys(CONTRACT_OPERATIONS).map((k) =>
+          k.slice(k.indexOf(' ') + 1),
+        ),
+      ).size
+  )
     throw Error('OPENAPI_CONTRACT_INVALID');
-  if (ids.size !== 21) throw Error('OPENAPI_OPERATION_COUNT_INVALID');
+  if (ids.size !== Object.keys(CONTRACT_OPERATIONS).length)
+    throw Error('OPENAPI_OPERATION_COUNT_INVALID');
   for (const route of prepared) {
     const op = spec.paths[route].get;
     for (const code of [
@@ -197,30 +238,7 @@ try {
       if (param.in === 'path' && param.schema?.format !== 'uuid')
         throw Error('OPENAPI_READ_PATH_UUID_INVALID');
   }
-  const expectedOperations = {
-    'GET /api/v1': 'AppController_getHello',
-    'GET /api/v1/health/live': 'getHealthLive',
-    'GET /api/v1/health/ready': 'getHealthReady',
-    'GET /api/v1/health': 'getHealth',
-    'POST /api/v1/auth/login': 'iamLogin',
-    'POST /api/v1/auth/refresh': 'iamRefresh',
-    'GET /api/v1/auth/me': 'iamMe',
-    'POST /api/v1/auth/logout': 'iamLogout',
-    'GET /api/v1/auth/sessions': 'iamSessions',
-    'DELETE /api/v1/auth/sessions/{sessionId}': 'iamRevokeSession',
-    'GET /api/v1/hospitales': 'listAuthorizedHospitals',
-    'GET /api/v1/hospitales/{hospitalId}/divisiones': 'listAuthorizedDivisions',
-    'GET /api/v1/servicios': 'listAuthorizedServices',
-    'GET /api/v1/empleados': 'listScopedStaff',
-    'GET /api/v1/empleados/{empleadoId}': 'getScopedEmployee',
-    'GET /api/v1/contratos/{contratoId}/adscripciones': 'listScopedAssignments',
-    'GET /api/v1/programaciones': 'listScopedWeeklyProgramming',
-    'GET /api/v1/tableros/coordinacion': 'getScopedProgrammingIndicators',
-    'GET /api/v1/meta/version': 'getApiContractVersion',
-    'GET /api/v1/pases-lista': 'listScopedAttendanceRoster',
-    'PUT /api/v1/programaciones/{programacionId}/asistencia':
-      'captureInitialAttendance',
-  };
+  const expectedOperations = CONTRACT_OPERATIONS;
   const observedOperations = Object.fromEntries(
     Object.entries(spec.paths).flatMap(([route, methods]) =>
       Object.entries(methods)
@@ -406,7 +424,69 @@ try {
   }
   const output = root + '/artifacts/openapi/sigeh-v1.json';
   fs.mkdirSync(path.dirname(output), { recursive: true });
-  fs.writeFileSync(output, JSON.stringify(spec, null, 2) + '\n');
+  const limit = spec.paths[
+    '/api/v1/servicios/{servicioId}/subareas'
+  ].get.parameters.find((p) => p.name === 'limit').schema;
+  if (
+    limit.type !== 'integer' ||
+    limit.minimum !== 1 ||
+    limit.maximum !== 100 ||
+    limit.default !== 50 ||
+    limit.allOf
+  )
+    throw Error('OPENAPI_LIMIT_TYPE_INVALID');
+  if (
+    createHash('sha256')
+      .update(
+        fs.readFileSync(
+          root + '/artifacts/openapi/history/e2e-mvp-01-base-33.json',
+        ),
+      )
+      .digest('hex') !==
+    '07dbf25606dc47595ab9a3cc84284b761b6256064238338172e074c0a193dde5'
+  )
+    throw Error('OPENAPI_BASELINE_CORRUPTED');
+  if (createHash('sha256').update(fs.readFileSync(root + '/artifacts/openapi/history/e2e-mvp-02-base-47.json')).digest('hex') !== 'f272e23b8acccde37f8ff5557a6a6126e38d3faa112cbf5f4892a3d4f4d3a689')
+    throw Error('OPENAPI_BASELINE47_CORRUPTED');
+  const publication = spec.paths['/api/v1/programaciones/generar'].post;
+  const key = publication.parameters.find(p => p.in === 'header' && p.name.toLowerCase() === 'idempotency-key');
+  if (!key?.required || key.schema?.format !== 'uuid' || publication['x-sigeh-default-enabled'] !== false)
+    throw Error('OPENAPI_PUBLICATION_GATE_INVALID');
+  for (const code of ['409', '422'])
+    if (publication.responses[code]?.content?.['application/json']?.schema?.$ref !== '#/components/schemas/ReadHttpErrorDto') throw Error('OPENAPI_PUBLICATION_ERROR_INVALID');
+  const configuration = spec.paths['/api/v1/contratos/{contratoId}/configuracion-laboral'].get;
+  if (JSON.stringify(configuration.parameters.filter(p => p.in === 'query').map(p => p.name).sort()) !== JSON.stringify(['divisionId','fecha','hospitalId','servicioId']))
+    throw Error('OPENAPI_LABOR_CONFIGURATION_QUERY_INVALID');
+  for (const name of ['hospitalId', 'servicioId', 'fecha']) if (!configuration.parameters.find(p => p.in === 'query' && p.name === name)?.required) throw Error('OPENAPI_LABOR_CONFIGURATION_REQUIRED_INVALID');
+  const bytes = JSON.stringify(spec, null, 2) + '\n';
+  const digest = createHash('sha256').update(bytes).digest('hex');
+  const manifestPath = root + '/artifacts/openapi/sigeh-v1.manifest.json';
+  const manifest = {
+    revision: CONTRACT_REVISION,
+    file: 'artifacts/openapi/sigeh-v1.json',
+    sha256: digest,
+    operations: CONTRACT_OPERATIONS,
+    baseline47: {
+      file: 'artifacts/openapi/history/e2e-mvp-02-base-47.json',
+      sha256: 'f272e23b8acccde37f8ff5557a6a6126e38d3faa112cbf5f4892a3d4f4d3a689',
+    },
+    baseline33: {
+      file: 'artifacts/openapi/history/e2e-mvp-01-base-33.json',
+      sha256:
+        '07dbf25606dc47595ab9a3cc84284b761b6256064238338172e074c0a193dde5',
+    },
+  };
+  if (process.argv.includes('--check')) {
+    if (
+      fs.readFileSync(output, 'utf8') !== bytes ||
+      JSON.stringify(JSON.parse(fs.readFileSync(manifestPath))) !==
+        JSON.stringify(manifest)
+    )
+      throw Error('OPENAPI_DRIFT_DETECTED');
+  } else {
+    fs.writeFileSync(output, bytes);
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+  }
   console.log(
     JSON.stringify({
       status: 'PASS',

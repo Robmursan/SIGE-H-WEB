@@ -18,6 +18,39 @@ describe('validateEnv', () => {
     JWT_EXPIRATION: '8h',
   };
 
+  it.each([
+    'ORG_ADMIN_READS_ENABLED',
+    'ORG_ADMIN_WRITES_ENABLED',
+    'CAL_SIMULATION_ENABLED',
+    'CAL_PUBLICATION_ENABLED',
+  ] as const)(
+    'nueva bandera %s requiere true explícito y no acepta ambigüedad',
+    (key) => {
+      expect(validateEnv(validBaseEnv)[key]).toBe('false');
+      expect(validateEnv({ ...validBaseEnv, [key]: 'true' })[key]).toBe('true');
+      for (const value of ['1', 'yes', true, 'TRUE'])
+        expect(() => validateEnv({ ...validBaseEnv, [key]: value })).toThrow(
+          key,
+        );
+    },
+  );
+
+  it('HOST por defecto es loopback; exposición solo con IP explícita validada', () => {
+    expect(validateEnv(validBaseEnv).HOST).toBe('127.0.0.1');
+    expect(validateEnv({ ...validBaseEnv, HOST: '0.0.0.0' }).HOST).toBe(
+      '0.0.0.0',
+    );
+    expect(() => validateEnv({ ...validBaseEnv, HOST: 'not-a-host' })).toThrow(
+      'HOST',
+    );
+  });
+  it.each(['WORKFORCE_READS_ENABLED', 'WORKFORCE_WRITES_ENABLED'] as const)(
+    'bandera %s no activa escrituras por valores ambiguos',
+    (key) => {
+      expect(validateEnv(validBaseEnv)[key]).toBe('false');
+      expect(() => validateEnv({ ...validBaseEnv, [key]: 'yes' })).toThrow(key);
+    },
+  );
   it('valida correctamente la configuración mínima y aplica valores por defecto de timeouts y JWT', () => {
     const result = validateEnv(validBaseEnv);
 

@@ -5,9 +5,15 @@ import { vi } from 'vitest';
 // is copied into the worktree. PG_POOL is replaced by a tripwire in HTTP tests.
 for (const [name, value] of Object.entries({
   NODE_ENV: 'test',
+  WORKFORCE_READS_ENABLED: 'false',
+  WORKFORCE_WRITES_ENABLED: 'false',
   IAM_V2_ENABLED: 'false',
   L3A_READS_ENABLED: 'false',
   ASISTENCIA_ENABLED: 'false',
+  ORG_ADMIN_READS_ENABLED: 'false',
+  ORG_ADMIN_WRITES_ENABLED: 'false',
+  CAL_SIMULATION_ENABLED: 'false',
+  CAL_PUBLICATION_ENABLED: 'false',
   DB_HOST: '127.0.0.1',
   DB_PORT: '55432',
   DB_NAME: 'sigeh_qa',

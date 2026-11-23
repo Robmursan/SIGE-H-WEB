@@ -4,11 +4,28 @@ import { OrganizationQueries } from './application/organization-queries.js';
 import { OrganizationRepository } from './infrastructure/organization.repository.js';
 import { OrganizationController } from './organization.controller.js';
 
-// HTTP exposes only the projection allowed by the current QA SQL grants.
+import {
+  OrganizationAdminReadController,
+  OrganizationAdminWriteController,
+  OrganizationAdminReadGuard,
+  OrganizationAdminWriteGuard,
+} from './organization-admin.controller.js';
+import { OrganizationAdminRepository } from './organization-admin.repository.js';
+// New administration is independently disabled; no SQL grants are applied.
 @Module({
   imports: [IamModule],
-  controllers: [OrganizationController],
-  providers: [OrganizationQueries, OrganizationRepository],
+  controllers: [
+    OrganizationController,
+    OrganizationAdminReadController,
+    OrganizationAdminWriteController,
+  ],
+  providers: [
+    OrganizationQueries,
+    OrganizationRepository,
+    OrganizationAdminRepository,
+    OrganizationAdminReadGuard,
+    OrganizationAdminWriteGuard,
+  ],
   exports: [OrganizationQueries],
 })
 export class OrganizacionModule {}

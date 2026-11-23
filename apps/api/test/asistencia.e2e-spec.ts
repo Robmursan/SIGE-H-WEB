@@ -314,7 +314,7 @@ describe('CU-ASI HTTP local, IAM real sobre fixture y repositorio simulado', () 
       await t.app.close();
     }
   });
-  it('OpenAPI real: 21 operaciones, UUID, idempotencia, errores y respuestas tipadas', async () => {
+  it('OpenAPI real: 49 operaciones, UUID, idempotencia, errores y respuestas tipadas', async () => {
     const t = await setup(false);
     try {
       const d = createOpenApiDocument(t.app),
@@ -358,7 +358,7 @@ describe('CU-ASI HTTP local, IAM real sobre fixture y repositorio simulado', () 
           'limit',
         ]),
       );
-      expect(Object.keys(d.paths)).toHaveLength(21);
+      expect(Object.keys(d.paths)).toHaveLength(42);
       expect(t.forbidden).not.toHaveBeenCalled();
     } finally {
       await t.app.close();
